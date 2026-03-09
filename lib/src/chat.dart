@@ -15,7 +15,11 @@ import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/calling_message_data_provider.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/custom_message_element.dart';
+import 'package:tencent_cloud_chat_demo/utils/file_send_helper.dart';
+import 'package:tencent_cloud_chat_demo/utils/file_chunk_assembler.dart';
+import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/enum/group_type.dart';
+import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
 import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_conversation.dart';
@@ -26,6 +30,7 @@ import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
   if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/chat_life_cycle.dart';
+import 'package:tencent_cloud_chat_uikit/business_logic/separate_models/tui_chat_separate_view_model.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -57,6 +62,10 @@ class _ChatState extends State<Chat> {
   String? backRemark;
   final V2TIMManager sdkInstance = TIMUIKitCore.getSDKInstance();
   String? conversationName;
+  
+  // 文件上传进度
+  double _uploadProgress = 0.0;
+  bool _isUploading = false;
 
   String _getTitle() {
     return backRemark ?? widget.selectedConversation.showName ?? "Chat";
@@ -68,6 +77,194 @@ class _ChatState extends State<Chat> {
 
   ConvType _getConvType() {
     return widget.selectedConversation.type == 1 ? ConvType.c2c : ConvType.group;
+  }
+
+  // 发送文件（支持大文件）
+  Future<void> _sendFile(TUIChatSeparateViewModel model) async {
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.0;
+    });
+
+    try {
+      await FileSendHelper.sendFile(
+        model: model,
+        convID: _getConvID() ?? '',
+        convType: _getConvType(),
+        onProgress: (fileId, progress) {
+          setState(() {
+            _uploadProgress = progress;
+          });
+        },
+        onComplete: (fileId) {
+          setState(() {
+            _isUploading = false;
+            _uploadProgress = 1.0;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('文件发送成功')),
+          );
+        },
+        onError: (error) {
+          setState(() {
+            _isUploading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('发送失败：$error')),
+          );
+        },
+      );
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('错误：$e')),
+      );
+    }
+  }
+
+  // 处理接收到的消息（用于分片文件合并）
+  FileChunkAssembler? _fileChunkAssembler;
+
+  Future<void> _handleReceivedMessage(V2TimMessage message) async {
+    debugPrint('🔔 _handleReceivedMessage 被调用, msgID=${message.id}, elemType=${message.elemType}');
+    
+    // 检查是否是文件消息
+    if (message.elemType != MessageElemType.V2TIM_ELEM_TYPE_FILE) {
+      debugPrint('不是文件消息，跳过处理');
+      return;
+    }
+    
+    final fileName = message.fileElem?.fileName ?? '';
+    debugPrint('收到文件消息: $fileName');
+    
+    if (!fileName.startsWith('chunk_')) {
+      debugPrint('普通文件，不是分片，跳过');
+      return;
+    }
+    
+    debugPrint('检测到分片文件，准备处理');
+    
+    _fileChunkAssembler ??= FileChunkAssembler(
+      onProgress: (fileId, progress) {
+        debugPrint('文件接收进度：${(progress * 100).toStringAsFixed(1)}%');
+      },
+      onComplete: (fileId, filePath, fileName, msgIdsToDelete) async {
+        debugPrint('文件接收完成：$fileName, 保存位置: $filePath');
+        debugPrint('需要删除的分片消息ID: $msgIdsToDelete');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('大文件接收完成：$fileName\n保存位置: $filePath')),
+          );
+          ToastUtils.toast('大文件接收完成：$fileName');
+        }
+      },
+      onError: (fileId, error) {
+        debugPrint('文件接收错误：$error');
+        ToastUtils.toast('文件接收错误：$error');
+      },
+    );
+
+    await _fileChunkAssembler!.onMessageReceived(message);
+  }
+
+  void _showMergeDialog() async {
+    // 先初始化并扫描本地分片
+    _fileChunkAssembler ??= FileChunkAssembler(
+      onProgress: (fileId, progress) {
+        debugPrint('文件接收进度：${(progress * 100).toStringAsFixed(1)}%');
+      },
+      onComplete: (fileId, filePath, fileName, msgIdsToDelete) async {
+        debugPrint('文件接收完成：$fileName, 保存位置: $filePath');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('大文件接收完成：$fileName\n保存位置: $filePath')),
+          );
+          ToastUtils.toast('大文件接收完成：$fileName');
+        }
+      },
+      onError: (fileId, error) {
+        debugPrint('文件接收错误：$error');
+        ToastUtils.toast('文件接收错误：$error');
+      },
+    );
+    
+    // 扫描本地分片文件
+    await _fileChunkAssembler!.scanLocalChunks();
+    
+    final pendingList = _fileChunkAssembler!.getPendingMergeInfo();
+    
+    if (pendingList.isEmpty) {
+      ToastUtils.toast('暂无待合并的分片文件');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('分片文件合并'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: pendingList.length,
+            itemBuilder: (context, index) {
+              final info = pendingList[index];
+              final canMerge = info.isComplete;
+              return ListTile(
+                title: Text(info.fileName),
+                subtitle: Text('${info.receivedChunks}/${info.totalChunks} 分片'),
+                trailing: canMerge 
+                  ? ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _doMerge(info.fileId);
+                      },
+                      child: const Text('合并'),
+                    )
+                  : Text(
+                      '等待中',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                enabled: canMerge,
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final count = await _fileChunkAssembler!.deleteAllChunks();
+              if (mounted) {
+                Navigator.pop(context);
+                ToastUtils.toast('已删除 $count 个分片文件');
+              }
+            },
+            child: const Text('删除全部', style: TextStyle(color: Colors.red)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _doMerge(String fileId) async {
+    if (_fileChunkAssembler == null) {
+      ToastUtils.toast('合并器未初始化');
+      return;
+    }
+
+    try {
+      await _fileChunkAssembler!.manualMerge(fileId);
+      ToastUtils.toast('合并完成');
+    } catch (e) {
+      ToastUtils.toast('合并失败: $e');
+    }
   }
 
   _onTapAvatar(String userID, TapDownDetails tapDetails, TUITheme theme) {
@@ -93,9 +290,9 @@ class _ChatState extends State<Chat> {
   @override
   void initState() {
     super.initState();
-    // if (IMDemoConfig.customerServiceUserList.contains(widget.selectedConversation.userID)) {
-    //   TencentCloudChatCustomerServicePlugin.sendCustomerServiceStartMessage(_chatController.sendMessage);
-    // }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ToastUtils.toast('聊天页面已加载 - 文件分片功能已启用');
+    });
   }
 
   @override
@@ -200,12 +397,15 @@ class _ChatState extends State<Chat> {
     }
     return TencentPage(
       name: 'chat',
-      child: TIMUIKitChat(
+      child: Stack(
+        children: [
+          TIMUIKitChat(
         // New field, instead of `conversationID` / `conversationType` / `groupAtInfoList` / `conversationShowName` in previous.
         conversation: widget.selectedConversation,
         conversationShowName: conversationName ?? _getTitle(),
         controller: _chatController,
         lifeCycle: ChatLifeCycle(newMessageWillMount: (V2TimMessage message) async {
+          await _handleReceivedMessage(message);
           return message;
         }, messageShouldMount: (V2TimMessage message) {
           return true;
@@ -345,7 +545,26 @@ class _ChatState extends State<Chat> {
         morePanelConfig: MorePanelConfig(
           showVideoCall: true,
           showVoiceCall: true,
-          extraAction: [],
+          extraAction: [
+            MorePanelItem(
+              id: 'large_file',
+              icon: Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/ic_file.png'),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              title: TIM_t("大文件"),
+              onTap: (context) async {
+                final model = Provider.of<TUIChatSeparateViewModel>(context, listen: false);
+                await _sendFile(model);
+              },
+            ),
+          ],
         ),
         appBarConfig: AppBar(
           actions: [
@@ -418,32 +637,105 @@ class _ChatState extends State<Chat> {
                                       size: 20,
                                     ))
                               ],
-                              // textTheme: TextTheme(
-                              //     titleMedium: TextStyle(
-                              //         color: hexToColor("010000"),
-                              //         fontSize: 16)),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      conversationName ?? _getTitle(),
+                                      style: TextStyle(
+                                        color: hexToColor("010000"),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            conversationShowName: _getTitle(),
-                            conversationID: _getConvID() ?? "",
-                            showC2cMessageEditStatus: true,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 1,
-                          child: Container(
-                            color: theme.weakDividerColor,
                           ),
                         ),
                       ],
                     ),
-                    if (PlatformUtils().isMacOS)
-                      SizedBox(
-                        height: 20,
-                        child: MoveWindow(),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Row(
+                        children: [
+                          if (_isUploading)
+                            Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor?.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      value: _uploadProgress,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                                    style: TextStyle(
+                                      color: theme.primaryColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
                   ],
-                ))
+                ),
+              )
             : null,
+          ),
+          // 全局悬浮球 - 发送文件
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isUploading)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor?.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                FloatingActionButton(
+                  heroTag: 'file_send_btn',
+                  onPressed: () {
+                    _showMergeDialog();
+                  },
+                  backgroundColor: theme.primaryColor ?? Colors.blue,
+                  child: const Icon(Icons.merge_type, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

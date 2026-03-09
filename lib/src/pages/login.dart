@@ -135,7 +135,8 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final CoreServicesImpl coreInstance = TIMUIKitCore.getInstance();
 
-  String userID = '';
+  String userID = 'n';
+  final TextEditingController _userIdController = TextEditingController(text: 'n');
 
   @override
   initState() {
@@ -296,6 +297,7 @@ class _LoginFormState extends State<LoginForm> {
                       ),
                     ),
                     TextField(
+                      controller: _userIdController,
                       autofocus: false,
                       decoration: InputDecoration(
                         contentPadding: EdgeInsets.only(left: CommonUtils.adaptWidth(14)),
