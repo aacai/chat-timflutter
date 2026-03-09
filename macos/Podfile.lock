@@ -10,44 +10,48 @@ PODS:
   - device_info_plus (0.0.1):
     - FlutterMacOS
   - fc_native_video_thumbnail (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - file_picker (0.0.1):
     - FlutterMacOS
   - file_selector_macos (0.0.1):
     - FlutterMacOS
+  - flutter_image_compress_macos (1.0.0):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
-  - FMDB (2.7.10):
-    - FMDB/standard (= 2.7.10)
-  - FMDB/standard (2.7.10)
   - HydraAsync (2.0.6)
-  - image_clipboard (0.0.1):
-    - FlutterMacOS
   - just_audio (0.0.1):
+    - Flutter
     - FlutterMacOS
-  - location (0.0.1):
+  - open_file_mac (1.0.3):
     - FlutterMacOS
   - package_info_plus (0.0.1):
     - FlutterMacOS
   - pasteboard (0.0.1):
     - FlutterMacOS
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - photo_manager (2.0.0):
+  - photo_manager (3.9.0):
     - Flutter
     - FlutterMacOS
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - sqflite (0.0.2):
+  - sqflite_darwin (0.0.4):
+    - Flutter
     - FlutterMacOS
-    - FMDB (>= 2.7.5)
-  - tencent_cloud_chat_sdk (7.0.0):
+  - tencent_cloud_chat_sdk (8.0.0):
     - FlutterMacOS
     - HydraAsync
-    - TXIMSDK_Plus_Mac (>= 7.9.5666)
-  - TXIMSDK_Plus_Mac (7.9.5666)
+    - TXIMSDK_Plus_Mac (= 8.9.7511)
+  - TXIMSDK_Plus_Mac (8.9.7511)
   - url_launcher_macos (0.0.1):
     - FlutterMacOS
+  - video_player_avfoundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - wakelock_plus (0.0.1):
+    - FlutterMacOS
+  - webview_flutter_wkwebview (0.0.1):
+    - Flutter
     - FlutterMacOS
 
 DEPENDENCIES:
@@ -56,25 +60,26 @@ DEPENDENCIES:
   - desktop_drop (from `Flutter/ephemeral/.symlinks/plugins/desktop_drop/macos`)
   - desktop_webview_window_for_is (from `Flutter/ephemeral/.symlinks/plugins/desktop_webview_window_for_is/macos`)
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
-  - fc_native_video_thumbnail (from `Flutter/ephemeral/.symlinks/plugins/fc_native_video_thumbnail/macos`)
+  - fc_native_video_thumbnail (from `Flutter/ephemeral/.symlinks/plugins/fc_native_video_thumbnail/darwin`)
+  - file_picker (from `Flutter/ephemeral/.symlinks/plugins/file_picker/macos`)
   - file_selector_macos (from `Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos`)
+  - flutter_image_compress_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_image_compress_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
-  - image_clipboard (from `Flutter/ephemeral/.symlinks/plugins/image_clipboard/macos`)
-  - just_audio (from `Flutter/ephemeral/.symlinks/plugins/just_audio/macos`)
-  - location (from `Flutter/ephemeral/.symlinks/plugins/location/macos`)
+  - just_audio (from `Flutter/ephemeral/.symlinks/plugins/just_audio/darwin`)
+  - open_file_mac (from `Flutter/ephemeral/.symlinks/plugins/open_file_mac/macos`)
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
   - pasteboard (from `Flutter/ephemeral/.symlinks/plugins/pasteboard/macos`)
-  - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
-  - photo_manager (from `Flutter/ephemeral/.symlinks/plugins/photo_manager/macos`)
+  - photo_manager (from `Flutter/ephemeral/.symlinks/plugins/photo_manager/darwin`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
-  - sqflite (from `Flutter/ephemeral/.symlinks/plugins/sqflite/macos`)
+  - sqflite_darwin (from `Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin`)
   - tencent_cloud_chat_sdk (from `Flutter/ephemeral/.symlinks/plugins/tencent_cloud_chat_sdk/macos`)
   - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
+  - video_player_avfoundation (from `Flutter/ephemeral/.symlinks/plugins/video_player_avfoundation/darwin`)
   - wakelock_plus (from `Flutter/ephemeral/.symlinks/plugins/wakelock_plus/macos`)
+  - webview_flutter_wkwebview (from `Flutter/ephemeral/.symlinks/plugins/webview_flutter_wkwebview/darwin`)
 
 SPEC REPOS:
   trunk:
-    - FMDB
     - HydraAsync
     - TXIMSDK_Plus_Mac
 
@@ -90,61 +95,66 @@ EXTERNAL SOURCES:
   device_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
   fc_native_video_thumbnail:
-    :path: Flutter/ephemeral/.symlinks/plugins/fc_native_video_thumbnail/macos
+    :path: Flutter/ephemeral/.symlinks/plugins/fc_native_video_thumbnail/darwin
+  file_picker:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_picker/macos
   file_selector_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos
+  flutter_image_compress_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_image_compress_macos/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
-  image_clipboard:
-    :path: Flutter/ephemeral/.symlinks/plugins/image_clipboard/macos
   just_audio:
-    :path: Flutter/ephemeral/.symlinks/plugins/just_audio/macos
-  location:
-    :path: Flutter/ephemeral/.symlinks/plugins/location/macos
+    :path: Flutter/ephemeral/.symlinks/plugins/just_audio/darwin
+  open_file_mac:
+    :path: Flutter/ephemeral/.symlinks/plugins/open_file_mac/macos
   package_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
   pasteboard:
     :path: Flutter/ephemeral/.symlinks/plugins/pasteboard/macos
-  path_provider_foundation:
-    :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   photo_manager:
-    :path: Flutter/ephemeral/.symlinks/plugins/photo_manager/macos
+    :path: Flutter/ephemeral/.symlinks/plugins/photo_manager/darwin
   shared_preferences_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
-  sqflite:
-    :path: Flutter/ephemeral/.symlinks/plugins/sqflite/macos
+  sqflite_darwin:
+    :path: Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin
   tencent_cloud_chat_sdk:
     :path: Flutter/ephemeral/.symlinks/plugins/tencent_cloud_chat_sdk/macos
   url_launcher_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
+  video_player_avfoundation:
+    :path: Flutter/ephemeral/.symlinks/plugins/video_player_avfoundation/darwin
   wakelock_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/wakelock_plus/macos
+  webview_flutter_wkwebview:
+    :path: Flutter/ephemeral/.symlinks/plugins/webview_flutter_wkwebview/darwin
 
 SPEC CHECKSUMS:
-  audio_session: dea1f41890dbf1718f04a56f1d6150fd50039b72
-  bitsdojo_window_macos: 44e3b8fe3dd463820e0321f6256c5b1c16bb6a00
-  desktop_drop: 69eeff437544aa619c8db7f4481b3a65f7696898
-  desktop_webview_window_for_is: 173eb6a1bcdf3e54b54a16649e23fe83cbef8f13
-  device_info_plus: 5401765fde0b8d062a2f8eb65510fb17e77cf07f
-  fc_native_video_thumbnail: 828487c6e1509b0ba74f6741b2788ac47aa0285b
-  file_selector_macos: 468fb6b81fac7c0e88d71317f3eec34c3b008ff9
-  FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
-  FMDB: eae540775bf7d0c87a5af926ae37af69effe5a19
+  audio_session: eaca2512cf2b39212d724f35d11f46180ad3a33e
+  bitsdojo_window_macos: 7959fb0ca65a3ccda30095c181ecb856fae48ea9
+  desktop_drop: e0b672a7d84c0a6cbc378595e82cdb15f2970a43
+  desktop_webview_window_for_is: 5a1dadb936db59b6f9246819641830fd9c6411bd
+  device_info_plus: a56e6e74dbbd2bb92f2da12c64ddd4f67a749041
+  fc_native_video_thumbnail: b511cec81fad66be9b28dd54b9adb39d40fcd6cc
+  file_picker: 7584aae6fa07a041af2b36a2655122d42f578c1a
+  file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
+  flutter_image_compress_macos: e68daf54bb4bf2144c580fd4d151c949cbf492f0
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   HydraAsync: 8d589bd725b0224f899afafc9a396327405f8063
-  image_clipboard: 09a15b2a0ee0b0a6d3d7f2e033f41b2bade1c495
-  just_audio: 9b67ca7b97c61cfc9784ea23cd8cc55eb226d489
-  location: 7cdb0665bd6577d382b0a343acdadbcb7f964775
-  package_info_plus: 02d7a575e80f194102bef286361c6c326e4c29ce
-  pasteboard: 9b69dba6fedbb04866be632205d532fe2f6b1d99
-  path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c
-  photo_manager: 4f6810b7dfc4feb03b461ac1a70dacf91fba7604
-  shared_preferences_foundation: 5b919d13b803cadd15ed2dc053125c68730e5126
-  sqflite: a5789cceda41d54d23f31d6de539d65bb14100ea
-  tencent_cloud_chat_sdk: 9b98eb3dc7bee6d63a95a155a6ed69ce5c29d8ff
-  TXIMSDK_Plus_Mac: 7a82e7602e894c706bb9b61bd78f0b7b2cf69281
-  url_launcher_macos: 5335912b679c073563f29d89d33d10d459f95451
-  wakelock_plus: 4783562c9a43d209c458cb9b30692134af456269
+  just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
+  open_file_mac: 76f06c8597551249bdb5e8fd8827a98eae0f4585
+  package_info_plus: f0052d280d17aa382b932f399edf32507174e870
+  pasteboard: 278d8100149f940fb795d6b3a74f0720c890ecb7
+  photo_manager: 25fd77df14f4f0ba5ef99e2c61814dde77e2bceb
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
+  tencent_cloud_chat_sdk: 362c90a2fc926c1a77d7494ac4e6a3f131a5b53a
+  TXIMSDK_Plus_Mac: f25069a302d3c6f3337b4d895ccbeecbfb20d47e
+  url_launcher_macos: f87a979182d112f911de6820aefddaf56ee9fbfd
+  video_player_avfoundation: dd410b52df6d2466a42d28550e33e4146928280a
+  wakelock_plus: 917609be14d812ddd9e9528876538b2263aaa03b
+  webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
 
 PODFILE CHECKSUM: dac0ddf03d136db544afc27b87cc6c08492e67b9
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2

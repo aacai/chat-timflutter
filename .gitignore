@@ -53,3 +53,18 @@ local.properties
 
 # FVM Version Cache
 .fvm/
+
+# iOS
+**/ios/Pods/
+**/ios/.symlinks
+**/ios/Podfile.lock
+
+# Android
+**/android/.gradle/
+**/android/app/build/
+
+# Implicit dependencies
+flutter_*.png
+
+# Coverage
+coverage/
