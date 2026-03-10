@@ -7,6 +7,7 @@ import 'package:path/path.dart' as path;
 import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_message.dart';
+import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
 import 'file_chunk_uploader.dart';
 
 /// 文件合并信息
@@ -295,9 +296,14 @@ class FileChunkAssembler {
       String targetPath = path.join(downloadDir.path, metadata.fileName);
       
       // 如果文件已存在，先删除
-      if (await File(targetPath).exists()) {
+      final existingFile = File(targetPath);
+      if (await existingFile.exists()) {
         print('🗑️ 删除已存在的文件: $targetPath');
-        await File(targetPath).delete();
+        try {
+          //有时本来有文件，也说没文件
+          await existingFile.delete();
+        } catch (e) {
+        }
       }
       
       print('📍 目标文件路径: $targetPath');
@@ -546,9 +552,66 @@ class FileChunkAssembler {
     }
   }
 
+  /// 查询并保存分片消息ID（通过会话历史消息）
+  Future<List<String>> queryChunkMessageIds(String conversationId, String fileId) async {
+    print('🔍 _queryAndSaveChunkMessageIds: conversationId=$conversationId, fileId=$fileId');
+    
+    if (_chunkMessageIds.containsKey(fileId) && _chunkMessageIds[fileId]!.isNotEmpty) {
+      print('📝 已有缓存的消息ID: ${_chunkMessageIds[fileId]}');
+      return _chunkMessageIds[fileId]!;
+    }
+    
+    try {
+      final isGroup = conversationId.startsWith('group_');
+      final res = isGroup 
+        ? await TencentImSDKPlugin.v2TIMManager.v2TIMMessageManager.getGroupHistoryMessageList(
+            groupID: conversationId,
+            count: 100,
+          )
+        : await TencentImSDKPlugin.v2TIMManager.v2TIMMessageManager.getC2CHistoryMessageList(
+            userID: conversationId,
+            count: 100,
+          );
+      
+      if (res.code == 0 && res.data != null) {
+        final messages = res.data!;
+        
+        for (final msg in messages) {
+          if (msg.elemType != MessageElemType.V2TIM_ELEM_TYPE_FILE) continue;
+          
+          final fileName = msg.fileElem?.fileName ?? '';
+          if (!fileName.startsWith('chunk_')) continue;
+          
+          final parts = fileName.split('|');
+          if (parts.length < 2) continue;
+          
+          final msgFileId = parts[1];
+          if (msgFileId == fileId && msg.id != null) {
+            final msgId = msg.id!;
+            _chunkMessageIds.putIfAbsent(fileId, () => []);
+            if (!_chunkMessageIds[fileId]!.contains(msgId)) {
+              _chunkMessageIds[fileId]!.add(msgId);
+              print('📝 查询到分片消息ID: $msgId, fileId=$fileId');
+            }
+          }
+        }
+      }
+      
+      return _chunkMessageIds[fileId] ?? [];
+    } catch (e) {
+      print('❌ 查询分片消息ID失败: $e');
+      return [];
+    }
+  }
+
   /// 手动触发合并指定 fileId 的分片文件
-  Future<void> manualMerge(String fileId) async {
-    print('🔧 manualMerge 被调用, fileId=$fileId');
+  Future<void> manualMerge(String fileId, {String? conversationId}) async {
+    print('🔧 manualMerge 被调用, fileId=$fileId, conversationId=$conversationId');
+    
+    // 如果提供了 conversationId，先查询消息ID
+    if (conversationId != null) {
+      await queryChunkMessageIds(conversationId, fileId);
+    }
     
     if (_completedFiles.contains(fileId)) {
       print('⚠️ 文件已处理过');
@@ -609,6 +672,19 @@ class FileChunkAssembler {
       ));
     }
     return infoList;
+  }
+
+  /// 获取所有待删除的分片消息ID
+  List<String> getAllChunkMessageIds() {
+    final List<String> allMsgIds = [];
+    for (final msgIds in _chunkMessageIds.values) {
+      for (final msgId in msgIds) {
+        if (!allMsgIds.contains(msgId)) {
+          allMsgIds.add(msgId);
+        }
+      }
+    }
+    return allMsgIds;
   }
 
   /// 一键删除所有分片文件
