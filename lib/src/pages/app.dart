@@ -24,6 +24,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
+import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
@@ -249,8 +250,21 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
   }
 
   initApp() {
+    _initFileTransfer();
     // 检测登录状态
     InitStep.checkLogin(context, initIMSDKAndAddIMListeners);
+  }
+
+  /// 大文件分片是后台静默完成的，只在合并出结果时给一条提示。
+  void _initFileTransfer() {
+    final service = FileTransferService.instance;
+    service.onCompleted = (fileId, path, fileName) {
+      ToastUtils.toast('${TIM_t("大文件接收完成")} $fileName');
+    };
+    service.onFailed = (fileId, error) {
+      ToastUtils.toast('${TIM_t("大文件合并失败")} $error');
+    };
+    service.restore();
   }
 
   initScreenUtils() {

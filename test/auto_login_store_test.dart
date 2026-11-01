@@ -103,10 +103,10 @@ void main() {
 
       expect(await AutoLoginStore.usableUserID(), isNull);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.contains('devLoginUserID'), isFalse);
-      expect(prefs.contains('devUserSig'), isFalse);
-      expect(prefs.contains('smsLoginToken'), isFalse);
-      expect(prefs.contains('smsLoginPhone'), isFalse);
+      expect(prefs.getKeys().contains('devLoginUserID'), isFalse);
+      expect(prefs.getKeys().contains('devUserSig'), isFalse);
+      expect(prefs.getKeys().contains('smsLoginToken'), isFalse);
+      expect(prefs.getKeys().contains('smsLoginPhone'), isFalse);
       expect(prefs.getString('firstTime'), 'true');
     });
 
@@ -121,7 +121,7 @@ void main() {
       await AutoLoginStore.clearAutoLogin();
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.contains('smsLoginToken'), isTrue);
+      expect(prefs.getKeys().contains('smsLoginToken'), isTrue);
       expect(await AutoLoginStore.usableUserID(), isNull);
     });
   });
