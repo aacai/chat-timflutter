@@ -4,6 +4,7 @@ import 'package:tencent_cloud_chat_demo/src/pages/home_page.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/login.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/custom_sticker_package.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:provider/provider.dart';
@@ -46,7 +47,18 @@ class InitStep {
         .customStickerPackageList = customStickerPackageList;
   }
 
-  static void removeLocalSetting() async {
+  static removeLocalSetting() async {
+    await AutoLoginStore.clearAll();
+  }
+
+  /// 启动分流：登录页自己决定要不要自动登录，这里只负责把界面切过去。
+  static void checkLogin(BuildContext context, initIMSDKAndAddIMListeners) {
+    initIMSDKAndAddIMListeners();
+
+    Future.delayed(const Duration(seconds: 1), () {
+      directToLogin(context);
+      setCustomSticker(context);
+    });
   }
 
   static directToLogin(BuildContext context, [Function? initIMSDKAndAddIMListeners]) {
@@ -83,16 +95,5 @@ class InitStep {
           settings: const RouteSettings(name: '/homePage')),
       ModalRoute.withName('/'),
     );
-  }
-
-  static void checkLogin(BuildContext context, initIMSDKAndAddIMListeners) async {
-    // 初始化IM SDK
-    initIMSDKAndAddIMListeners();
-
-    Future.delayed(const Duration(seconds: 1), () {
-      directToLogin(context);
-      // 修改自定义表情的执行时机
-      setCustomSticker(context);
-    });
   }
 }

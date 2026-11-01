@@ -115,9 +115,9 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
     // 被踢下线
     try {
       await TIMUIKitCore.getInstance().logout();
+      // 先清登录态再回登录页，否则登录页会立刻自动重登，和被踢的另一端无限对冲。
+      await InitStep.removeLocalSetting();
       InitStep.directToLogin(cachedBuildContext ?? context);
-      // 去掉存的一些数据
-      InitStep.removeLocalSetting();
       // ignore: empty_catches
     } catch (err) {}
   }

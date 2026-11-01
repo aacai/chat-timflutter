@@ -10,7 +10,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
-import 'package:tencent_cloud_chat_demo/utils/constant.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/request.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
@@ -104,17 +104,7 @@ class SettingsState extends State<Settings> {
     _handleLogout(BuildContext context) async {
       final res = await _coreServices.logout();
       if (res.code == 0) {
-        try {
-          Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
-          SharedPreferences prefs = await _prefs;
-          prefs.remove(Const.DEV_LOGIN_USER_ID);
-          prefs.remove(Const.DEV_LOGIN_USER_SIG);
-          prefs.remove(Const.SMS_LOGIN_TOKEN);
-          prefs.remove(Const.SMS_LOGIN_PHONE);
-        } catch (err) {
-          ToastUtils.log("someError");
-          ToastUtils.log(err);
-        }
+        await AutoLoginStore.clearAll();
         // InitStep.directToLogin(context);
         Routes().directToLoginPage();
       }

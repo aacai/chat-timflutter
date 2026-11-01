@@ -2,14 +2,12 @@ import 'dart:math';
 
 import 'package:adaptive_action_sheet/adaptive_action_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/about_us.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/contact_us.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/settings.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
-import 'package:tencent_cloud_chat_demo/utils/constant.dart';
-import 'package:tencent_cloud_chat_demo/utils/toast.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
@@ -58,17 +56,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
   _handleLogout(BuildContext context) async {
     final res = await _coreServices.logout();
     if (res.code == 0) {
-      try {
-        Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
-        SharedPreferences prefs = await _prefs;
-        prefs.remove(Const.DEV_LOGIN_USER_ID);
-        prefs.remove(Const.DEV_LOGIN_USER_SIG);
-        prefs.remove(Const.SMS_LOGIN_TOKEN);
-        prefs.remove(Const.SMS_LOGIN_PHONE);
-      } catch (err) {
-        ToastUtils.log("someError");
-        ToastUtils.log(err);
-      }
+      await AutoLoginStore.clearAll();
       Routes().directToLoginPage();
     }
   }

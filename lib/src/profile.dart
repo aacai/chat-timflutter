@@ -8,6 +8,7 @@ import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/about.dart';
 import 'package:tencent_cloud_chat_demo/src/my_profile_detail.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/skin/skin_page.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
 import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
@@ -62,17 +63,7 @@ class _ProfileState extends State<MyProfile> {
     final res = await _coreServices.logout();
 
     if (res.code == 0) {
-      try {
-        Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
-        SharedPreferences prefs = await _prefs;
-        prefs.remove(Const.DEV_LOGIN_USER_ID);
-        prefs.remove(Const.DEV_LOGIN_USER_SIG);
-        prefs.remove(Const.SMS_LOGIN_TOKEN);
-        prefs.remove(Const.SMS_LOGIN_PHONE);
-      } catch (err) {
-        ToastUtils.log("someError");
-        ToastUtils.log(err);
-      }
+      await AutoLoginStore.clearAll();
       Routes().directToLoginPage();
 
       // Navigator.of(context).pushAndRemoveUntil(

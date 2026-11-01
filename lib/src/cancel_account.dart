@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_self_info_view_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/services_locatar.dart';
@@ -27,17 +28,7 @@ class CancelAccount extends StatelessWidget {
   _handleLogout(BuildContext context) async {
     final res = await _coreServices.logout();
     if (res.code == 0) {
-      try {
-        Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
-        SharedPreferences prefs = await _prefs;
-        prefs.remove(Const.DEV_LOGIN_USER_ID);
-        prefs.remove(Const.DEV_LOGIN_USER_SIG);
-        prefs.remove(Const.SMS_LOGIN_TOKEN);
-        prefs.remove(Const.SMS_LOGIN_PHONE);
-      } catch (err) {
-        ToastUtils.log("someError");
-        ToastUtils.log(err);
-      }
+      await AutoLoginStore.clearAll();
       Routes().directToLoginPage();
     }
   }

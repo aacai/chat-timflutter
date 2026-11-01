@@ -17,6 +17,7 @@ import 'package:tencent_cloud_chat_demo/src/pages/privacy/privacy_webview.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/GenerateTestUserSig.dart';
+import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/commonUtils.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -137,11 +138,13 @@ class _LoginFormState extends State<LoginForm> {
 
   String userID = 'n';
   final TextEditingController _userIdController = TextEditingController(text: 'n');
+  bool _autoLogin = true;
 
   @override
   initState() {
     super.initState();
     checkFirstEnter();
+    loadSavedUserInfo();
     if (widget.initIMSDK != null) {
       widget.initIMSDK!();
     }
@@ -220,11 +223,54 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
+  void loadSavedUserInfo() async {
+    // 退出登录会清掉保存的用户名，这里读不到就说明上一次是主动退出或已被踢下线。
+    final savedUserID = await AutoLoginStore.savedUserID();
+    final enabled = await AutoLoginStore.isEnabled();
+    final autoLoginUserID = await AutoLoginStore.usableUserID();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _autoLogin = enabled;
+      if (savedUserID != null && savedUserID.isNotEmpty) {
+        userID = savedUserID;
+        _userIdController.text = savedUserID;
+      }
+    });
+
+    if (autoLoginUserID == null) {
+      return;
+    }
+    Future.delayed(const Duration(milliseconds: 500), () {
+      userLogin();
+    });
+  }
+
+  Future<void> saveUserInfo() async {
+    await AutoLoginStore.save(userID.trim(), enabled: _autoLogin);
+  }
+
+  /// 自动登录失败时关掉开关但保留用户名，否则被踢下线会形成登录-被踢死循环。
+  Future<void> _disableAutoLogin() async {
+    await AutoLoginStore.disable();
+    if (mounted) {
+      setState(() {
+        _autoLogin = false;
+      });
+    }
+  }
+
   directToHomePage() {
     Routes().directToHomePage();
   }
 
+  bool _isLoggingIn = false;
+
   userLogin() async {
+    if (_isLoggingIn) {
+      return;
+    }
     if (userID.trim() == '') {
       ToastUtils.toast(TIM_t("请输入用户名"));
       return;
@@ -233,29 +279,39 @@ class _LoginFormState extends State<LoginForm> {
     String key = IMDemoConfig.key;
     int sdkAppId = IMDemoConfig.sdkAppID;
     if (key == "" || sdkAppId == 0) {
-      ToastUtils.toast(TIM_t("请在 config.dart 中输入 sdkAppID 和 key"));
+      ToastUtils.toast(TIM_t("请在 im_credentials.dart 中输入 sdkAppID 和 key"));
       return;
     }
-    GenerateTestUserSig generateTestUserSig = GenerateTestUserSig(
-      sdkappid: sdkAppId,
-      key: key,
-    );
+    _isLoggingIn = true;
+    try {
+      GenerateTestUserSig generateTestUserSig = GenerateTestUserSig(
+        sdkappid: sdkAppId,
+        key: key,
+      );
 
-    String userSig = generateTestUserSig.genSig(identifier: userID, expire: 99999);
+      String userSig = generateTestUserSig.genSig(identifier: userID, expire: 99999);
 
-    await TUICallKit.instance.login(sdkAppId, userID, userSig);
+      await TUICallKit.instance.login(sdkAppId, userID, userSig);
 
-    var data = await coreInstance.login(
-      userID: userID,
-      userSig: userSig,
-    );
-    if (data.code != 0) {
-      final option1 = data.desc;
-      ToastUtils.toast(TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1));
-      return;
+      var data = await coreInstance.login(
+        userID: userID,
+        userSig: userSig,
+      );
+      if (data.code != 0) {
+        final option1 = data.desc;
+        ToastUtils.toast(TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1));
+        // 自动登录失败不再保留开关，交给用户手动登录，避免反复弹登录失败。
+        await _disableAutoLogin();
+        return;
+      }
+
+      // 登录成功后才落盘登录态，保存失败不影响本次会话。
+      await saveUserInfo();
+
+      directToHomePage();
+    } finally {
+      _isLoggingIn = false;
     }
-
-    directToHomePage();
   }
 
   @override
@@ -312,9 +368,29 @@ class _LoginFormState extends State<LoginForm> {
                         });
                       },
                     ),
+                    SizedBox(height: CommonUtils.adaptHeight(20)),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _autoLogin,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _autoLogin = value ?? false;
+                            });
+                          },
+                        ),
+                        Text(
+                          TIM_t("自动登录"),
+                          style: TextStyle(
+                            fontSize: CommonUtils.adaptFontSize(28),
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
                     Container(
                       margin: EdgeInsets.only(
-                        top: CommonUtils.adaptHeight(46),
+                        top: CommonUtils.adaptHeight(20),
                       ),
                       child: Row(
                         children: [
