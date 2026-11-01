@@ -39,6 +39,9 @@ jobs:
     name: android arm64-v8a
     needs: quality
     runs-on: ubuntu-latest
+    # 上一次这个 job 跑了 60 分钟被判失败，而且整份 job 日志（含前 8 步的输出）都没上传，
+    # 说明 runner 是被环境搞挂的，不是编译报错。超时会正常取消，日志能留下来。
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -55,12 +58,64 @@ jobs:
           secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - uses: ./.github/actions/patch-uikit-linux
+      # TXIMSDK 的 AAR 很大，gradle 的 transforms 缓存会把 ubuntu runner 的盘写满。
+      # 只能删确定用不上的预装内容：/opt/hostedtoolcache 里装着 Flutter 和 JDK，整目录删不得；
+      # /usr/local/lib/android 是 gradle 要的 SDK，也删不得。docker 镜像这个 job 用不到。
+      - name: 腾出磁盘空间
+        run: |
+          df -h /
+          free -m
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            /usr/local/share/vcpkg /opt/hostedtoolcache/CodeQL /home/runner/.npm \
+            /usr/local/lib/azure-powershell* /usr/local/share/powershell
+          sudo docker image prune -a -f
+          sudo apt-get clean
+          df -h /
+          free -m
+      # 每两分钟记一行磁盘/内存，构建失败时能从日志里看出是谁先耗尽的。
+      - name: 资源监控
+        run: |
+          monitor="$RUNNER_TEMP/monitor.log"
+          : > "$monitor"
+          ( while sleep 120; do
+              printf '%s disk_free=%s mem_avail=%sMB java_rss=%sMB\n' \
+                "$(date -u +%T)" \
+                "$(df -h / | awk 'NR==2{print $4}')" \
+                "$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)" \
+                "$(ps -eo rss=,comm= | awk '$2=="java"{s+=$1} END{print int(s/1024)}')"
+            done > "$monitor" ) &
+          echo $! > "$RUNNER_TEMP/monitor.pid"
+      # android/gradle.properties 里写的是 -Xmx8g；runner 只有 16G，还要留给 Dart AOT 和 Kotlin 编译。
+      # 只改 CI 这份 checkout，本机配置不动；改完打印出来，日志里能看到生效值。
+      - name: 收紧 CI 的 gradle 内存
+        run: |
+          sed -i 's/-Xmx8G/-Xmx4G/' android/gradle.properties
+          echo 'org.gradle.workers.max=2' >> android/gradle.properties
+          cat android/gradle.properties
       # abiFilters 已锁定 arm64-v8a，产物本身就是单架构，不需要 --split-per-abi
-      - run: flutter build apk --release --dart-define=APP_VERSION="$APP_VERSION"
+      # --obfuscate 混淆 Dart 符号，--split-debug-info 是它的配套：不拆出来符号就打进包里了。
+      - run: |
+          flutter build apk --release --obfuscate --split-debug-info=build/symbols \
+            --dart-define=APP_VERSION="$APP_VERSION"
+      - name: 资源占用记录
+        if: always()
+        run: |
+          kill "$(cat "$RUNNER_TEMP/monitor.pid")" 2>/dev/null || true
+          cat "$RUNNER_TEMP/monitor.log" 2>/dev/null || echo "没有监控记录"
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-android-arm64-v8a
           path: build/app/outputs/flutter-apk/app-release.apk
+      # 混淆后的崩溃栈只有这两份文件能还原，必须跟版本一起留档；APK 里不能有它们。
+      - name: 存档反混淆符号
+        run: ls -l build/app/outputs/mapping/release/mapping.txt build/symbols/
+      - uses: actions/upload-artifact@v4
+        with:
+          # 名字故意不带 chat-timflutter- 前缀：release job 按前缀抓附件，这份不能被发出去
+          name: symbols-android-arm64
+          path: |
+            build/app/outputs/mapping/release/mapping.txt
+            build/symbols/
 
   windows:
     name: windows x64
@@ -80,11 +135,11 @@ jobs:
       - run: flutter build windows --release --dart-define=APP_VERSION="$APP_VERSION"
         shell: bash
       - name: 打包
-        shell: bash
+        shell: pwsh
         run: |
-          release=$(find build/windows -type d -name Release | head -1)
-          test -n "$release"
-          (cd "$release" && zip -qr "$GITHUB_WORKSPACE/chat-timflutter-windows-x64.zip" .)
+          $release = Get-ChildItem -Path build\windows -Recurse -Directory -Filter Release | Select-Object -First 1
+          if (-not $release) { throw "找不到 Release 产物目录" }
+          Compress-Archive -Path "$($release.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\chat-timflutter-windows-x64.zip" -Force
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-windows-x64
@@ -125,8 +180,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      # 只抓包体：反混淆符号（mapping.txt、.symbols）一旦挂到公开 Release，混淆就白做了。
       - uses: actions/download-artifact@v4
         with:
+          name: chat-timflutter-android-arm64-v8a
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: chat-timflutter-windows-x64
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: chat-timflutter-macos-arm64
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
