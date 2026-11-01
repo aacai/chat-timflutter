@@ -49,6 +49,9 @@ app.*.map.json
 
 local.properties
 
+# 本地腾讯云 IM 凭据（sdkAppID + secretKey），绝不入库
+/lib/im_credentials.dart
+
 *.cxx/
 
 # FVM Version Cache

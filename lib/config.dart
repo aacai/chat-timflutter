@@ -1,10 +1,14 @@
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
+import 'package:tencent_cloud_chat_demo/im_credentials.dart';
 
 enum WebUrl { personalInfo, thirdPartyInfo }
 
 class IMDemoConfig {
-  static const int sdkAppID = 1600012202;
-  static const String key = "d9e0a81f19203871901bfc0a236d03f569f09acbcb7c14a5c851a4d883dfeca0";
+  /// sdkAppID / secretKey 来自未纳入版本管理的 im_credentials.dart。
+  /// 本地开发：复制 im_credentials.example.dart 为 im_credentials.dart 并填入自己的凭据。
+  /// CI：由 .github/workflows 从仓库 Secrets 生成该文件。
+  static const int sdkAppID = ImCredentials.sdkAppID;
+  static const String key = ImCredentials.key;
   static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: "0.0.1");
   static const String projectType = String.fromEnvironment('PROJECT_TYPE', defaultValue: "discord");
   static const bool productEnv = bool.fromEnvironment('ISPRODUCT_ENV', defaultValue: false);

@@ -1,0 +1,131 @@
+name: build
+
+on:
+  push:
+    branches: ["mycustom-feature"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.41.4"
+  APP_VERSION: ${{ github.ref_name }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: ./.github/actions/im-credentials
+        with:
+          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
+          secret-key: ${{ secrets.IM_SECRET_KEY }}
+      - run: flutter pub get
+      # 存量告警较多，先只把 error 当失败，告警在日志里单独列。
+      - run: dart analyze --no-fatal-warnings
+      - run: flutter test
+
+  android:
+    name: android arm64-v8a
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: ./.github/actions/im-credentials
+        with:
+          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
+          secret-key: ${{ secrets.IM_SECRET_KEY }}
+      - run: flutter pub get
+      # abiFilters 已锁定 arm64-v8a，产物本身就是单架构，不需要 --split-per-abi
+      - run: flutter build apk --release --dart-define=APP_VERSION="$APP_VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chat-timflutter-android-arm64-v8a
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  windows:
+    name: windows x64
+    needs: quality
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: ./.github/actions/im-credentials
+        with:
+          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
+          secret-key: ${{ secrets.IM_SECRET_KEY }}
+      - run: flutter pub get
+      - run: flutter build windows --release --dart-define=APP_VERSION="$APP_VERSION"
+        shell: bash
+      - name: 打包
+        shell: bash
+        run: |
+          release=$(find build/windows -type d -name Release | head -1)
+          test -n "$release"
+          (cd "$release" && zip -qr "$GITHUB_WORKSPACE/chat-timflutter-windows-x64.zip" .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chat-timflutter-windows-x64
+          path: chat-timflutter-windows-x64.zip
+
+  macos:
+    name: macos arm64
+    needs: quality
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: ./.github/actions/im-credentials
+        with:
+          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
+          secret-key: ${{ secrets.IM_SECRET_KEY }}
+      - run: flutter pub get
+      # macos-14 是 arm64 runner，不交叉编译 x86_64，产物单架构
+      - run: flutter build macos --release --dart-define=APP_VERSION="$APP_VERSION"
+      - name: 打包
+        run: |
+          app=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -1)
+          test -n "$app"
+          ditto -c -k --keepParent "$app" chat-timflutter-macos-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chat-timflutter-macos-arm64
+          path: chat-timflutter-macos-arm64.zip
+
+  release:
+    name: 发 Release
+    needs: [android, windows, macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
