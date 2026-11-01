@@ -74,8 +74,8 @@ class _ContactUsState extends State<ContactUs> {
                     children: [
                       Image.asset(
                           isInternational
-                              ? "assets/telegram.png"
-                              : "assets/wechat_qr.png",
+                              ? "assets/telegram.webp"
+                              : "assets/wechat_qr.webp",
                           height: isInternational ? 80 : 150),
                       const SizedBox(
                         height: 20,
@@ -86,7 +86,7 @@ class _ContactUsState extends State<ContactUs> {
                           style: TextStyle(fontSize: 16),
                         ),
                       if (!isInternational)
-                        Image.asset("assets/wechat.png", height: 30),
+                        Image.asset("assets/wechat.webp", height: 30),
                       const SizedBox(
                         height: 20,
                       ),
@@ -109,7 +109,7 @@ class _ContactUsState extends State<ContactUs> {
                       Image.asset(
                           isInternational
                               ? "assets/whatsapp.png"
-                              : "assets/qq_qr.png",
+                              : "assets/qq_qr.webp",
                           height: isInternational ? 80 : 150),
                       const SizedBox(
                         height: 20,
@@ -120,7 +120,7 @@ class _ContactUsState extends State<ContactUs> {
                           style: TextStyle(fontSize: 16),
                         ),
                       if (!isInternational)
-                        Image.asset("assets/qq.png", height: 35),
+                        Image.asset("assets/qq.webp", height: 35),
                       const SizedBox(
                         height: 20,
                       ),

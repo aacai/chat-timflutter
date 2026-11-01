@@ -4,6 +4,8 @@ on:
   push:
     branches: ["mycustom-feature"]
     tags: ["v*"]
+    # 只改文档不触发构建；三平台一轮要烧掉几十分钟 Actions 额度。
+    paths-ignore: ["**.md"]
   pull_request:
   workflow_dispatch:
 
@@ -58,6 +60,16 @@ jobs:
           secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - uses: ./.github/actions/patch-uikit-linux
+      # app/build.gradle 排掉了 ffmpeg-android-java（那 9M 的 32 位二进制），依据是
+      # 语音消息从来不碰 wav→mp3 转换。这个前提一旦被 uikit 改掉，包里的二进制就没了而代码还在调它，
+      # 表现是语音消息静默坏掉，所以把前提钉在构建里。
+      - name: 校验 ffmpeg 依赖排掉的前提仍成立
+        run: |
+          hits=$(grep -rl initRecordMp3 "$HOME/.pub-cache/hosted/" --include='*.dart' \
+            | grep -v flutter_plugin_record_plus || true)
+          echo "== 引用 initRecordMp3 的包 =="
+          [ -z "$hits" ] && echo "(none)" || echo "$hits"
+          [ -z "$hits" ] || { echo "::error::有包会触发 wav->mp3 转换，ffmpeg-android-java 不能再排"; exit 1; }
       # TXIMSDK 的 AAR 很大，gradle 的 transforms 缓存会把 ubuntu runner 的盘写满。
       # 只能删确定用不上的预装内容：/opt/hostedtoolcache 里装着 Flutter 和 JDK，整目录删不得；
       # /usr/local/lib/android 是 gradle 要的 SDK，也删不得。docker 镜像这个 job 用不到。
@@ -92,11 +104,70 @@ jobs:
           sed -i 's/-Xmx8G/-Xmx4G/' android/gradle.properties
           echo 'org.gradle.workers.max=2' >> android/gradle.properties
           cat android/gradle.properties
-      # abiFilters 已锁定 arm64-v8a，产物本身就是单架构，不需要 --split-per-abi
-      # --obfuscate 混淆 Dart 符号，--split-debug-info 是它的配套：不拆出来符号就打进包里了。
+      # abiFilters 单独写没用：flutter 默认 target-platform 是 arm+arm64+x64 三个，
+      # 它会把三个 ABI 的 libapp.so 和插件 so 全塞进同一个 APK（上次实测 198.6M 里 154.6M 是双份废架构）。
+      # --target-platform 锁 arm64 才是真单架构。--obfuscate 混淆 Dart 符号，--split-debug-info 是它的配套。
       - run: |
-          flutter build apk --release --obfuscate --split-debug-info=build/symbols \
-            --dart-define=APP_VERSION="$APP_VERSION"
+          flutter build apk --release --target-platform=android-arm64 --obfuscate \
+            --split-debug-info=build/symbols --dart-define=APP_VERSION="$APP_VERSION"
+      - name: 校验产物只含 arm64
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          echo "== 包内原生库 Top20 =="
+          unzip -l "$apk" 'lib/*' | awk '$4 ~ /^lib\// {print $1, $4}' | sort -rn | head -20
+          abis=$(unzip -Z1 "$apk" 'lib/*' | awk -F/ '{print $2}' | sort -u | tr '\n' ' ')
+          echo "APK 内 ABI: [$abis] 体积: $(du -h "$apk" | cut -f1)"
+          [ "$abis" = "arm64-v8a " ] || { echo "::error::产物混进了其它架构: [$abis]"; exit 1; }
+          # 依赖 AAR 发来的 assets 也一起盯住：AGP 的 packaging exclude 管不到它们，只能排依赖。
+          left=$(unzip -Z1 "$apk" | grep -c -e '^assets/armeabi' -e 'ffmpeg$' || true)
+          echo "非 arm64 的 32 位二进制残留: $left 项"
+          [ "$left" = "0" ] || { echo "::error::包里还有 32 位二进制残留"; unzip -Z1 "$apk" | grep -e '^assets/armeabi' -e 'ffmpeg$'; exit 1; }
+          # LiteAVSDK 换没换成功，看产物里还有没有 Professional 独有的原生库，别只信 gradle.properties。
+          pro_only=$(unzip -Z1 "$apk" 'lib/*' | grep -c -e libdownloadproxy -e libtpcore-master || true)
+          echo "LiteAVSDK_Professional 独有原生库: $pro_only 项"
+          [ "$pro_only" = "0" ] || { echo "::error::LiteAVSDK_Professional 还在依赖图里，liteavSdk 覆盖没生效"; exit 1; }
+          # resConfigs 'en','zh' 生效与否只认产物：arsc 是 stored，real=raw，无过滤时实测 1,466,444。
+          # 阈值留了余地（1.2M），只要它没明显变小就是没生效，别猜。
+          arsc=$(unzip -l "$apk" resources.arsc | awk '$4=="resources.arsc"{print $1}')
+          fa=$(unzip -Z1 "$apk" 'assets/flutter_assets/*' | wc -l)
+          echo "resources.arsc=$arsc  flutter_assets 条目=$fa"
+          [ "$arsc" -lt 1200000 ] || { echo "::error::resConfigs 没生效，resources.arsc 仍是 $arsc"; exit 1; }
+          # AGP 的坑：库里有 dummy_locale 资源时，resConfigs 会把整个 assets 目录删空。
+          # 本包无 dummy_locale，但这条兜底要留着——上一轮 flutter_assets 是 452 项。
+          [ "$fa" -ge 400 ] || { echo "::error::resConfigs 把 flutter_assets 删到只剩 $fa 项"; exit 1; }
+      # 每轮都把包体构成打出来，瘦身效果靠量不靠猜。
+      # 必须按压缩后体积算：so 和 png 是 stored（Flutter 的 noCompress），raw=实占；
+      # 但 json/dex 是 deflate，raw 会虚高一倍（rocket.json raw 5.8M 实际只占 4.4M）。
+      - name: 包体构成
+        run: |
+          python3 - build/app/outputs/flutter-apk/app-release.apk <<'PY'
+          import sys, zipfile, collections
+          z = zipfile.ZipFile(sys.argv[1])
+          rows = [(i.file_size, i.compress_size, i.filename) for i in z.infolist()]
+          print('APK 条目 %d，压缩后合计 %.1fM' % (len(rows), sum(r[1] for r in rows) / 1048576))
+          print('== 单文件 Top15（按包内实占） ==')
+          for fs, cs, n in sorted(rows, key=lambda r: -r[1])[:15]:
+              print('%6.2fM raw=%6.2fM  %s' % (cs / 1048576, fs / 1048576, n))
+          print('== 前缀汇总 ==')
+          def bucket(n):
+              p = n.split('/')
+              if p[:2] == ['assets', 'flutter_assets']:
+                  return 'flutter_assets/' + '/'.join(p[2:4])
+              if p[0] == 'assets' and len(p) > 1:
+                  return 'assets/' + p[1]
+              if p[0] == 'lib':
+                  return 'lib/' + p[1]
+              return n if len(p) == 1 else p[0] + '/' + p[1]
+          b = collections.Counter()
+          for fs, cs, n in rows:
+              b[bucket(n)] += cs
+          for k, v in sorted(b.items(), key=lambda x: -x[1])[:18]:
+              print('%7.2fM  %s' % (v / 1048576, k))
+          print('== 非 flutter_assets 的 assets 根文件 ==')
+          for fs, cs, n in rows:
+              if n.startswith('assets/') and not n.startswith('assets/flutter_assets'):
+                  print('%7.3fM  %s' % (cs / 1048576, n))
+          PY
       - name: 资源占用记录
         if: always()
         run: |
@@ -106,6 +177,8 @@ jobs:
         with:
           name: chat-timflutter-android-arm64-v8a
           path: build/app/outputs/flutter-apk/app-release.apk
+          # v4 默认 if-no-files-found: warn，0 个文件也算 success；windows 就是这样空过了好几天。
+          if-no-files-found: error
       # 混淆后的崩溃栈只有这两份文件能还原，必须跟版本一起留档；APK 里不能有它们。
       - name: 存档反混淆符号
         run: ls -l build/app/outputs/mapping/release/mapping.txt build/symbols/
@@ -116,6 +189,7 @@ jobs:
           path: |
             build/app/outputs/mapping/release/mapping.txt
             build/symbols/
+          if-no-files-found: error
 
   windows:
     name: windows x64
@@ -137,18 +211,28 @@ jobs:
       - name: 打包
         shell: pwsh
         run: |
-          $release = Get-ChildItem -Path build\windows -Recurse -Directory -Filter Release | Select-Object -First 1
-          if (-not $release) { throw "找不到 Release 产物目录" }
-          Compress-Archive -Path "$($release.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\chat-timflutter-windows-x64.zip" -Force
+          # ErrorActionPreference 必须是 Stop：Compress-Archive 失败属于非终止错误，
+          # 默认会把这一步判成 success，产物 zip 压根没生成（上一次就是这么空过的）。
+          $ErrorActionPreference = 'Stop'
+          $release = Join-Path $env:GITHUB_WORKSPACE 'build\windows\x64\runner\Release'
+          if (-not (Test-Path $release)) { throw "找不到 Release 产物目录：$release" }
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64.zip'
+          Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force
+          $item = Get-Item $zip
+          "windows 包：$($item.FullName) $([math]::Round($item.Length/1MB,1))MB"
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-windows-x64
           path: chat-timflutter-windows-x64.zip
+          if-no-files-found: error
 
   macos:
     name: macos arm64
     needs: quality
-    runs-on: macos-14
+    # macos-14 今天连续三次在排队 1-2 秒后被取消（0 步骤、没分到 runner），
+    # 同 run 的 linux/windows 正常，也不是额度（本仓今日合计 372 billed 分钟 / 2000）。
+    # 先换 macos-latest 试是不是 macos-14 资源池的问题。
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -171,6 +255,7 @@ jobs:
         with:
           name: chat-timflutter-macos-arm64
           path: chat-timflutter-macos-arm64.zip
+          if-no-files-found: error
 
   release:
     name: 发 Release

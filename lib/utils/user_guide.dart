@@ -53,7 +53,7 @@ class _UserGuideState extends State<UserGuide> {
                 });
               }),
               child: Image.asset(
-                "assets/user_guide/$screenType/$languageType/${widget.guideName}-$i.png",
+                "assets/user_guide/$screenType/$languageType/${widget.guideName}-$i.webp",
                 fit: BoxFit.fitHeight,
               ),
             )));

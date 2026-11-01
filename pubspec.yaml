@@ -98,8 +98,6 @@ flutter:
     - assets/user_guide/small/zh/
     - assets/user_guide/small/en/
     - assets/user_guide/
-    - assets/live/
-    - lib/country_list_pick-1.0.1+5/flags/
     - assets/calling_message/
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -137,8 +135,10 @@ flutter_intl:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/im_new_logo.jpg"
+  # 这两张只是 flutter_launcher_icons / flutter_native_splash 的生成输入，
+  # 运行时不读；放 assets/ 里会被 - assets/ 整目录打进包里（splash_new 单张 0.21M），所以挪出 assets/。
+  image_path: "tools/app_images/im_new_logo.jpg"
 
 flutter_native_splash:
-  background_image: "assets/splash_new.png"
+  background_image: "tools/app_images/splash_new.png"
   android_gravity: center

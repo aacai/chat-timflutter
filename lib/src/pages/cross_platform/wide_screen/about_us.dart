@@ -111,7 +111,7 @@ class _AboutUsState extends State<AboutUs> {
               SizedBox(
                 height: CommonUtils.adaptWidth(100),
                 child: const Image(
-                  image: AssetImage("assets/logo.png"),
+                  image: AssetImage("assets/logo.webp"),
                 ),
               ),
               const SizedBox(

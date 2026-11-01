@@ -48,6 +48,11 @@ android {
         ndk {
             abiFilters 'arm64-v8a'//,'armeabi-v7a','x86','x86_64'
         }
+        // resources.arsc 里 93% 的字符串字节是带语言限定的（实测 610K 里占 566K，138 个 locale），
+        // 全是 AAR 自带的翻译。这里只保留 default(英文) + zh*，其余 locale 整条从 arsc 删掉。
+        // 只动资源合并层，不碰代码，也不改 SDK 的默认文案。
+        // 前提：仓里没有 dummy_locale 资源（已用 aapt2 dump 核对过产物），否则这条会连 assets 一起删空。
+        resConfigs 'en', 'zh'
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_ABI=arm64-v8a"
@@ -88,6 +93,15 @@ android {
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
         pickFirst 'lib/x86/libc++_shared.so'
         pickFirst 'lib/x86_64/libc++_shared.so'
+        // defaultConfig 的 abiFilters 管不到依赖 AAR 带进来的 jni：
+        // 实测 --target-platform=android-arm64 之后包里仍有 armeabi-v7a/x86 系列 so。
+        // 这里按路径硬排，CI 的产物校验会盯住结果。
+        jniLibs {
+            excludes += ['lib/armeabi-v7a/*.so', 'lib/armeabi/*.so', 'lib/x86/*.so', 'lib/x86_64/*.so']
+        }
+        // 依赖 AAR 合并进来的 assets 轮不到 packagingOptions 管：
+        // exclude 'assets/armeabi-v7a/ffmpeg' 和 exclude '**/armeabi-v7a/**' 两种写法实测产物纹丝不动。
+        // 那 9.04M 最终是在依赖解析层排掉的，见文件末尾的 ffmpeg-android-java exclude。
     }
 
     splits {
@@ -100,6 +114,20 @@ android {
 
 flutter {
     source '../..'
+}
+
+// 语音消息那条 wav→mp3 转换链其实是永远走不到的死代码，它却是包里最肥的一项：
+// com.github.RoleWong:ffmpeg-android-java:v0.6（由 flutter_plugin_record_plus 的
+// android/build.gradle:61 拉进来的 AndroidAudioConverter 传递带入）发的
+// assets/armeabi-v7a/ffmpeg 原始 17.6M、包内实占 9.04M，而且只有 32 位二进制。
+// 死代码的证据：转换只在 FlutterPluginRecordPlugin.initRecordMp3() 里触发（recordMp3=true），
+// 而 uikit 的录音走 SoundPlayer.initSoundPlayer() -> _recorder.init()（sound_record.dart:22），
+// init() 把 recordMp3 置 false，stop 时直接把 .wav 路径回传（FlutterPluginRecordPlugin.kt:305/387）
+// ——也就是说语音消息上传的一直是 wav，ffmpeg 从没被 exec 过。
+// 只断 ffmpeg-android-java，保留 AndroidAudioConverter：插件的 Kotlin 编译期引用它的类。
+// CI 有一步在盯 initRecordMp3 的调用方，哪天 uikit 真去转 mp3 会构建报红，不会静默坏掉语音。
+configurations.all {
+    exclude group: 'com.github.RoleWong', module: 'ffmpeg-android-java'
 }
 
 dependencies {

@@ -33,7 +33,7 @@ class EmptyWidget extends StatelessWidget{
                   mainAxisSize: MainAxisSize.max,
                   children: [
                     Image.asset(
-                      "assets/empty.png",
+                      "assets/empty.webp",
                       width: 100,
                     ),
                     const SizedBox(height: 50),
