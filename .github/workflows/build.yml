@@ -55,13 +55,6 @@ jobs:
           secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - uses: ./.github/actions/patch-uikit-linux
-      # TXIMSDK 的 AAR 很大，gradle 的 transforms 缓存会把 ubuntu runner 的盘写满。
-      - name: 腾出磁盘空间
-        run: |
-          df -h /home/runner
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
-          sudo apt-get clean
-          df -h /home/runner
       # abiFilters 已锁定 arm64-v8a，产物本身就是单架构，不需要 --split-per-abi
       - run: flutter build apk --release --dart-define=APP_VERSION="$APP_VERSION"
       - uses: actions/upload-artifact@v4
@@ -87,11 +80,11 @@ jobs:
       - run: flutter build windows --release --dart-define=APP_VERSION="$APP_VERSION"
         shell: bash
       - name: 打包
-        shell: pwsh
+        shell: bash
         run: |
-          $release = Get-ChildItem -Path build\windows -Recurse -Directory -Filter Release | Select-Object -First 1
-          if (-not $release) { throw "找不到 Release 产物目录" }
-          Compress-Archive -Path "$($release.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\chat-timflutter-windows-x64.zip" -Force
+          release=$(find build/windows -type d -name Release | head -1)
+          test -n "$release"
+          (cd "$release" && zip -qr "$GITHUB_WORKSPACE/chat-timflutter-windows-x64.zip" .)
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-windows-x64
