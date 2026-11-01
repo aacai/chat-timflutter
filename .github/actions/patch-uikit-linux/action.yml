@@ -1,0 +1,32 @@
+name: patch-uikit-linux
+description: 修正 tencent_cloud_chat_uikit 依赖里两处 URI，否则区分大小写的文件系统上编译不过
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -uo pipefail
+        # 上游 5.0.1 全系列（含最新 5.0.1+5）有两处 URI 只在 macOS/Windows 那种不区分大小写、
+        # 且能容忍非标准根路径的文件系统上才编得过，Linux runner 上直接炸：
+        #   1) video_screen.dart 把目录写成 TIMUIKITMessageItem，真实目录是 TIMUIKitMessageItem；
+        #   2) tim_uikit_group_button_area.dart 用了 import '/theme/tui_theme.dart' 这种根路径写法。
+        # 改的是 pub 缓存副本，不动仓库；缓存可能被上一个 job 存成已修好的状态，所以按终态校验。
+        cache="${PUB_CACHE:-$HOME/.pub-cache}"
+        copies=0
+        for dir in "$cache"/hosted/*/tencent_cloud_chat_uikit-*/lib; do
+          [ -d "$dir" ] || continue
+          copies=$((copies + 1))
+          video="$dir/ui/widgets/video_screen.dart"
+          button="$dir/ui/views/TIMUIKitGroupProfile/widgets/tim_uikit_group_button_area.dart"
+          grep -q 'TIMUIKITMessageItem' "$video" 2>/dev/null &&
+            sed -i 's#TIMUIKITMessageItem#TIMUIKitMessageItem#g' "$video"
+          grep -q "import '/theme/tui_theme.dart'" "$button" 2>/dev/null &&
+            sed -i "s#import '/theme/tui_theme.dart'#import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart'#" "$button"
+          grep -q 'TIMUIKITMessageItem' "$video" 2>/dev/null && { echo "::error::$video 大小写没改过来"; exit 1; }
+          grep -q "import '/theme/tui_theme.dart'" "$button" 2>/dev/null && { echo "::error::$button 根路径没改掉"; exit 1; }
+        done
+        if [ "$copies" = "0" ]; then
+          echo "::error::PUB_CACHE（$cache）里没有 uikit 副本，先跑 flutter pub get"
+          exit 1
+        fi
+        echo "uikit 副本 $copies 份，两处 URI 均已修正"
