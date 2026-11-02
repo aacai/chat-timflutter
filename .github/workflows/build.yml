@@ -244,9 +244,12 @@ jobs:
           "装好：$main"
           # 中文显示名的编码是静默失效的：.iss 少了 BOM 就按 ANSI 读，装完变乱码。
           # 所以装完直接从卸载表里比对，不对就把这一步判失败。
+          # 只能比前缀：Inno 会把 AppVersion 拼成「$(AppName) version $(AppVersion)」，
+          # 分支构建时那就是「可达 version mycustom-feature」。
           $uninsKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8F4B2A6D-9C1E-4B7A-8E5F-3D0A7C6B1942}_is1'
           $dn = (Get-ItemProperty $uninsKey).DisplayName
-          if ($dn -ne '可达') { throw "卸载表里的 DisplayName 不是「可达」：[$dn]" }
+          if ($dn -notlike '可达*') { throw "卸载表里的 DisplayName 不是「可达」开头：[$dn]" }
+          "卸载表 DisplayName：$dn"
           if (Test-Path $unins) {
             $u = Start-Process -FilePath $unins -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
             "卸载退出码 $($u.ExitCode)"
