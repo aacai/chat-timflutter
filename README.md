@@ -30,8 +30,26 @@ push 到 `mycustom-feature` 或打 `v*` tag 触发 [build.yml](.github/workflows
 | --- | --- | --- |
 | analyze & test | ubuntu-latest | `dart analyze` + `flutter test`，后面所有 job 的前置 |
 | android arm64-v8a | ubuntu-latest | 单个 APK（`--target-platform=android-arm64`，构建后校验包内只剩一个 ABI） |
-| windows x64 | windows-latest | zip |
-| macos arm64 | macos-latest（arm64 runner，不交叉编 x86_64） | zip |
+| windows x64 | windows-latest | Inno Setup `chat-timflutter-windows-x64-setup.exe` + WiX `chat-timflutter-windows-x64.msi`（两个都在 runner 上静默装/卸一遍再上传） |
+| macos arm64 | macos-latest（arm64 runner，不交叉编 x86_64） | 拖拽式 `chat-timflutter-macos-arm64.dmg`（含 `/Applications` 快捷方式） |
+
+桌面端不发 zip：解压即安装的方式要求用户自己找位置、自己建快捷方式，不算交付。
+Windows 出两枚，装到同一个目录 `Program Files\Tencent Cloud Chat`，但**是两个独立产品，互不覆盖**：
+`.exe` 由 [packaging/windows/setup.iss](packaging/windows/setup.iss) 编（Inno 的 `AppId` 是固定 GUID），
+`.msi` 由 [packaging/windows/msi/product.wxs](packaging/windows/msi/product.wxs) 编（`UpgradeCode` 另一个固定 GUID，
+文件表不手抄——CI 用 `heat.exe` 对整个 Release 目录 harvest，组件 GUID 用 `-g` 播种保证每次构建一致）。
+两边的版本号都从 `APP_VERSION`（也就是 tag 名）读；MSI 的 `ProductVersion` 只收 `主.次.构建`，
+非 tag 构建退成 `0.0.0`。`.exe` 有安装向导，`.msi` 只有 Windows Installer 的基础进度条，走 AD/GPO 分发用它。
+两个都没做代码签名，也没公证：Windows 会弹 SmartScreen，macOS 首次打开要右键「打开」。
+
+**Linux 不出包，不是 CI 少配了一个 job，是 SDK 没有 Linux 的原生库。**
+`tencent_cloud_chat_sdk` 的 pubspec 只声明 android / ios / macos / windows / ohos，pub 包里没有
+`linux/` 目录也没有 `libdart_native_imsdk.so`；而它的 FFI 加载器在 `Platform.isLinux` 分支就是要
+`DynamicLibrary.open('libdart_native_imsdk.so')`（包内 `lib/native_im/bindings/native_library_manager.dart:47`）。
+所以 `flutter build linux` 编得过、窗口也起得来，IM 一初始化就挂——发一枚登不进去的 deb 比不发更糟。
+腾讯云文档里 Flutter Chat SDK 的支持平台表也没列 Linux。要补这一档，得先拿到官方 Linux 原生 SDK。
+（[.github/actions/patch-uikit-linux](.github/actions/patch-uikit-linux) 修的是 uikit 两处 URI 在大小写敏感文件系统上编不过的问题，
+那是 `dart analyze` 就要踩的坑，跟能不能跑起来是两回事。）
 
 只出 64 位单架构产物，不做 fat 包。gradle 里的 `abiFilters 'arm64-v8a'` 单独写是无效的：
 `flutter build apk` 默认 `--target-platform=android-arm,android-arm64,android-x64`，会按这个列表把

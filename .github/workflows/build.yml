@@ -208,22 +208,128 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release --dart-define=APP_VERSION="$APP_VERSION"
         shell: bash
-      - name: 打包
+      - name: 装 Inno Setup
         shell: pwsh
         run: |
-          # ErrorActionPreference 必须是 Stop：Compress-Archive 失败属于非终止错误，
-          # 默认会把这一步判成 success，产物 zip 压根没生成（上一次就是这么空过的）。
+          # ErrorActionPreference 必须是 Stop：choco 失败属于非终止错误，
+          # 默认会把这一步判成 success，后面拿 ISCC.exe 时才知道没装（上次 zip 就是这么空过的）。
+          $ErrorActionPreference = 'Stop'
+          choco install innosetup --no-progress -y
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "找不到 ISCC.exe：$iscc" }
+      - name: 打安装包
+        shell: pwsh
+        run: |
           $ErrorActionPreference = 'Stop'
           $release = Join-Path $env:GITHUB_WORKSPACE 'build\windows\x64\runner\Release'
           if (-not (Test-Path $release)) { throw "找不到 Release 产物目录：$release" }
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64.zip'
-          Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -Force
-          $item = Get-Item $zip
-          "windows 包：$($item.FullName) $([math]::Round($item.Length/1MB,1))MB"
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          $iss = Join-Path $env:GITHUB_WORKSPACE 'packaging\windows\setup.iss'
+          # 路径全靠 .iss 里的相对默认值（相对 .iss 所在目录解析），不从命令行传——
+          # /D 传裸反斜杠路径在 ISPP 里要不要加引号我拿不准，不拿 20 分钟构建去赌它。
+          & $iscc $iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC 编译失败，退出码 $LASTEXITCODE" }
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64-setup.exe'
+          if (-not (Test-Path $exe)) { throw "安装包没生成：$exe" }
+          $item = Get-Item $exe
+          "windows 安装包：$($item.FullName) $([math]::Round($item.Length/1MB,1))MB"
+      - name: 静默安装自检
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # 步骤之间不共享变量，安装包和临时目录的路径重新算一遍。
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64-setup.exe'
+          if (-not (Test-Path $exe)) { throw "安装包不存在：$exe" }
+          $log = Join-Path $env:RUNNER_TEMP 'inno-install.log'
+          $dir = Join-Path ${env:ProgramFiles} 'Tencent Cloud Chat'
+          $main = Join-Path $dir 'im_flutter_uikit_full_platform.exe'
+          $unins = Join-Path $dir 'unins000.exe'
+          # 只证明「ISCC 绿了」不算交付，这个包真在机器上落地过才算。
+          $p = Start-Process -FilePath $exe `
+            -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/LOG=$log" `
+            -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "静默安装退出码 $($p.ExitCode)" }
+          if (-not (Test-Path $main)) { throw "安装后主程序不存在：$main" }
+          "装好：$main"
+          if (Test-Path $unins) {
+            $u = Start-Process -FilePath $unins -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+            "卸载退出码 $($u.ExitCode)"
+          }
+          # MSI 装在同一个目录，这里必须回到干净状态；卸不干净就直接删，别让下一步吃 1603。
+          if (Test-Path $dir) {
+            Write-Output "::warning::Inno 卸载后目录仍在，手动清掉：$dir"
+            Remove-Item -Recurse -Force $dir
+          }
+      - name: 装 WiX Toolset
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # 不走 choco：官方 binaries.zip 直链 + 版本写死，缺文件当场炸，比包源漂移可控。
+          $zip = Join-Path $env:RUNNER_TEMP 'wix314-binaries.zip'
+          $wix = Join-Path $env:RUNNER_TEMP 'wix'
+          Invoke-WebRequest `
+            -Uri 'https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip' `
+            -OutFile $zip -UseBasicParsing
+          Expand-Archive -Path $zip -DestinationPath $wix -Force
+          foreach ($tool in 'heat.exe','candle.exe','light.exe') {
+            if (-not (Test-Path (Join-Path $wix $tool))) { throw "解压后缺 $tool" }
+          }
+      - name: 打 msi
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $wix = Join-Path $env:RUNNER_TEMP 'wix'
+          $release = Join-Path $env:GITHUB_WORKSPACE 'build\windows\x64\runner\Release'
+          if (-not (Test-Path $release)) { throw "找不到 Release 产物目录：$release" }
+          # Windows Installer 的 ProductVersion 只收「主.次.构建」且每段 <=65535；
+          # 分支跑时 APP_VERSION 是分支名，直接塞进去 light 会报错，退成 0.0.0。
+          if ($env:APP_VERSION -match '^v?(\d+\.\d+\.\d+)$') {
+            $ver = $Matches[1]
+          } else {
+            $ver = '0.0.0'
+          }
+          "msi ProductVersion=$ver (APP_VERSION=$env:APP_VERSION)"
+          $wxs = Join-Path $env:RUNNER_TEMP 'components.wxs'
+          $out = Join-Path $env:RUNNER_TEMP 'wixobj\'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          # -g 给 -gg 播种，组件 GUID 每次构建都一样，不然升级时旧组件清不掉。
+          & (Join-Path $wix 'heat.exe') dir $release -dr APPLICATIONFOLDER -cg AppFiles `
+            -gg -g '{530149F9-0D77-4DE5-B8FB-C63D3DD369CB}' -srd -var 'var.SourceDir' -out $wxs
+          if ($LASTEXITCODE -ne 0) { throw "heat 失败，退出码 $LASTEXITCODE" }
+          & (Join-Path $wix 'candle.exe') -arch x64 -out $out `
+            "-dSourceDir=$release" "-dProductVersion=$ver" `
+            (Join-Path $env:GITHUB_WORKSPACE 'packaging\windows\msi\product.wxs') $wxs
+          if ($LASTEXITCODE -ne 0) { throw "candle 失败，退出码 $LASTEXITCODE" }
+          $msi = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64.msi'
+          & (Join-Path $wix 'light.exe') -out $msi `
+            (Join-Path $out 'product.wixobj') (Join-Path $out 'components.wixobj')
+          if ($LASTEXITCODE -ne 0) { throw "light 失败，退出码 $LASTEXITCODE" }
+          if (-not (Test-Path $msi)) { throw "msi 没生成：$msi" }
+          $item = Get-Item $msi
+          "msi：$($item.FullName) $([math]::Round($item.Length/1MB,1))MB"
+      - name: msi 静默安装自检
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64.msi'
+          $log = Join-Path $env:RUNNER_TEMP 'msi-install.log'
+          $dir = Join-Path ${env:ProgramFiles} 'Tencent Cloud Chat'
+          $main = Join-Path $dir 'im_flutter_uikit_full_platform.exe'
+          $p = Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/l*v', $log -Wait -PassThru
+          if ($p.ExitCode -ne 0) {
+            if (Test-Path $log) { Get-Content $log -Tail 60 }
+            throw "msiexec 安装退出码 $($p.ExitCode)"
+          }
+          if (-not (Test-Path $main)) { throw "msi 装完主程序不存在：$main" }
+          "msi 装好：$main"
+          $u = Start-Process msiexec.exe -ArgumentList '/x', $msi, '/qn' -Wait -PassThru
+          "msi 卸载退出码 $($u.ExitCode)"
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-windows-x64
-          path: chat-timflutter-windows-x64.zip
+          path: |
+            chat-timflutter-windows-x64-setup.exe
+            chat-timflutter-windows-x64.msi
           if-no-files-found: error
 
   macos:
@@ -246,15 +352,29 @@ jobs:
       - run: flutter pub get
       # macos-14 是 arm64 runner，不交叉编译 x86_64，产物单架构
       - run: flutter build macos --release --dart-define=APP_VERSION="$APP_VERSION"
-      - name: 打包
+      - name: 打安装包
         run: |
+          set -euo pipefail
           app=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -1)
           test -n "$app"
-          ditto -c -k --keepParent "$app" chat-timflutter-macos-arm64.zip
+          name=$(basename "$app")
+          dmg=chat-timflutter-macos-arm64.dmg
+          # 拖拽式安装：窗口里一份 .app + 一个 /Applications 软链，用户拖一下就装完。
+          stage=$(mktemp -d)
+          ditto "$app" "$stage/$name"
+          ln -s /Applications "$stage/Applications"
+          hdiutil create -volname "${name%.app}" -srcfolder "$stage" -ov -format UDZO "$dmg"
+          # 挂载回来验交付：包在不在、快捷方式在不在、ad-hoc 签名有没有被 hdiutil 破坏。
+          hdiutil attach -nobrowse -readonly -mountpoint /Volumes/ctc-check "$dmg" >/dev/null
+          test -d "/Volumes/ctc-check/$name/Contents/MacOS"
+          test -L /Volumes/ctc-check/Applications
+          codesign --verify --verbose=2 "/Volumes/ctc-check/$name"
+          hdiutil detach /Volumes/ctc-check >/dev/null
+          ls -lh "$dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-macos-arm64
-          path: chat-timflutter-macos-arm64.zip
+          path: chat-timflutter-macos-arm64.dmg
           if-no-files-found: error
 
   release:

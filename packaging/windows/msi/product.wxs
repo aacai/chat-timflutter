@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Windows MSI（WiX v3）。文件表不在这里：CI 用 heat.exe 对
+     build\windows\x64\runner\Release 整目录 harvest 出 components.wxs，
+     组件组名必须对上下面的 AppFiles。
+     MSI 里的字符串只写 ASCII——Language=1033 的代码页装不下中文，写进去会变乱码。 -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?define AppName = "Tencent Cloud Chat" ?>
+  <?define AppExe = "im_flutter_uikit_full_platform.exe" ?>
+
+  <Product Id="*" Name="$(var.AppName)" Language="1033"
+           Version="$(var.ProductVersion)" Manufacturer="Tencent Cloud"
+           UpgradeCode="{61FECF18-D2E2-4A68-BCC4-D05D19CFDCE4}">
+
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64"
+             Description="$(var.AppName) $(var.ProductVersion)" />
+
+    <!-- 只按 UpgradeCode 认升级，跟 Inno 那枚 exe 是两个独立产品，互相不覆盖。 -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Tencent Cloud Chat is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="APPLICATIONFOLDER" Name="Tencent Cloud Chat" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="AppProgramMenuFolder" Name="$(var.AppName)" />
+      </Directory>
+    </Directory>
+
+    <Feature Id="ProductFeature" Title="$(var.AppName)" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Component Id="StartMenuShortcut" Directory="AppProgramMenuFolder" Guid="*">
+      <Shortcut Id="ApplicationStartMenuShortcut" Name="$(var.AppName)"
+                Target="[APPLICATIONFOLDER]$(var.AppExe)" WorkingDirectory="APPLICATIONFOLDER" />
+      <RemoveFolder Id="RemoveAppProgramMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]"
+                     Name="startmenu_shortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>
