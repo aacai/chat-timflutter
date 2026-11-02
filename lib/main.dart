@@ -19,6 +19,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/user_guide_provider.dart';
+import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
@@ -85,27 +86,55 @@ class TUIKitDemoApp extends StatelessWidget {
   const TUIKitDemoApp({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<DefaultThemeData>(context).theme;
-    return MaterialApp(
-      title: '可达',
-      debugShowCheckedModeBanner: false,
-      locale: TranslationProvider.of(context).flutterLocale, // use provider
-      supportedLocales: LocaleSettings.supportedLocales,
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(
-        platform: TargetPlatform.iOS,
-        pageTransitionsTheme: const PageTransitionsTheme(builders: {
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-        }),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-          backgroundColor: theme.primaryColor,
-        )),
+    final themeData = Provider.of<DefaultThemeData>(context);
+    final currentType = themeData.currentThemeType;
+    final light = DefTheme.getTheme(currentType, DarkModeType.light);
+    final dark = DefTheme.getTheme(currentType, DarkModeType.dark);
+    final isDark = themeData.themeMode == ThemeMode.dark ||
+        (themeData.themeMode == ThemeMode.system && DefTheme.isPlatformDark);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
       ),
-      home: const TencentChatApp(),
-      builder: EasyLoading.init(),
-      navigatorObservers: !PlatformUtils().isMobile ? [] : [TUICallKit.navigatorObserver],
+      child: MaterialApp(
+        title: '可达',
+        debugShowCheckedModeBanner: false,
+        locale: TranslationProvider.of(context).flutterLocale, // use provider
+        supportedLocales: LocaleSettings.supportedLocales,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        themeMode: themeData.themeMode,
+        theme: ThemeData(
+          platform: TargetPlatform.iOS,
+          brightness: Brightness.light,
+          scaffoldBackgroundColor: light.weakBackgroundColor,
+          pageTransitionsTheme: const PageTransitionsTheme(builders: {
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          }),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+            backgroundColor: light.primaryColor,
+          )),
+        ),
+        darkTheme: ThemeData(
+          platform: TargetPlatform.iOS,
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: dark.weakBackgroundColor,
+          pageTransitionsTheme: const PageTransitionsTheme(builders: {
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          }),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+            backgroundColor: dark.primaryColor,
+          )),
+        ),
+        home: const TencentChatApp(),
+        builder: EasyLoading.init(),
+        navigatorObservers: !PlatformUtils().isMobile ? [] : [TUICallKit.navigatorObserver],
+      ),
     );
   }
 }

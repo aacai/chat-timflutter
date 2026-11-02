@@ -17,9 +17,7 @@ class InitStep {
     ThemeType themeType = DefTheme.themeTypeFromString(themeTypeString);
     Provider.of<DefaultThemeData>(context, listen: false).currentThemeType =
         themeType;
-    Provider.of<DefaultThemeData>(context, listen: false).theme =
-    DefTheme.defaultTheme[themeType]!;
-    _coreInstance.setTheme(theme: DefTheme.defaultTheme[themeType]!);
+    _coreInstance.setTheme(theme: DefTheme.getTheme(themeType, Provider.of<DefaultThemeData>(context, listen: false).darkMode));
   }
 
   static setCustomSticker(BuildContext context) async {
@@ -73,7 +71,8 @@ class InitStep {
           );
         },
       ),
-      ModalRoute.withName('/'),
+      // 清空整个回退栈，让登录页成为新的根路由，避免返回时落在启动动画页。
+      (route) => false,
     );
   }
 
@@ -93,7 +92,8 @@ class InitStep {
             );
           },
           settings: const RouteSettings(name: '/homePage')),
-      ModalRoute.withName('/'),
+      // 清空整个回退栈，让主页成为新的根路由，返回即退出应用而不是卡在启动动画页。
+      (route) => false,
     );
   }
 }

@@ -56,11 +56,93 @@ class SkinPage extends StatelessWidget {
                 height: MediaQuery.of(context).size.height,
                 width: MediaQuery.of(context).size.width,
                 color: theme.weakBackgroundColor,
-                child: Wrap(
-                  spacing: 16.0, // 主轴(水平)方向间距
-                  runSpacing: 16.0, // 纵轴（垂直）方向间距
-                  alignment: WrapAlignment.center, //沿主轴方向居中
-                  children: skinBuilder(),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Text(
+                          TIM_t("夜间模式"),
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: theme.darkTextColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: theme.weakDividerColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: DarkModeType.values
+                              .map((mode) => Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Provider.of<DefaultThemeData>(context,
+                                                listen: false)
+                                            .darkMode = mode;
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 10),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          color: Provider.of<DefaultThemeData>(
+                                                          context)
+                                                      .darkMode ==
+                                                  mode
+                                              ? (theme.primaryColor ??
+                                                  CommonColor.primaryColor)
+                                              : Colors.transparent,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            mode.label,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Provider.of<DefaultThemeData>(
+                                                              context)
+                                                          .darkMode ==
+                                                      mode
+                                                  ? Colors.white
+                                                  : theme.weakTextColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Text(
+                          TIM_t("主题色"),
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: theme.darkTextColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 16.0, // 主轴(水平)方向间距
+                        runSpacing: 16.0, // 纵轴（垂直）方向间距
+                        alignment: WrapAlignment.center, //沿主轴方向居中
+                        children: skinBuilder(),
+                      ),
+                    ],
+                  ),
                 ))));
   }
 }

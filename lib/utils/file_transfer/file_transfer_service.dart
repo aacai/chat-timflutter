@@ -63,6 +63,9 @@ class FileTransferService {
   /// 与 UIKit 的文件上限保持一致，超过它才分片。
   static const int singleFileLimitBytes = 100 * 1024 * 1024;
 
+  /// 单个分片大小，可被设置页调整；默认用 ChunkCodec 的上限。
+  int chunkSizeBytes = ChunkCodec.maxChunkBytes;
+
   final Map<String, _PendingTransfer> _pending = {};
   final Map<String, TransferRecord> _records = {};
 
@@ -157,6 +160,7 @@ class FileTransferService {
       sourcePath: sourcePath,
       directory: dir.path,
       fileId: fileId,
+      chunkBytes: chunkSizeBytes,
     );
     try {
       for (final part in parts) {

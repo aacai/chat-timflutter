@@ -155,6 +155,7 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
     if (_isInitIMSDK) return;
     final LocalSetting localSetting = Provider.of<LocalSetting>(context, listen: false);
     await localSetting.loadSettingsFromLocal();
+    FileTransferService.instance.chunkSizeBytes = localSetting.chunkSizeMB * 1024 * 1024;
     final language = localSetting.language ?? await getLanguage();
     localSetting.updateLanguageWithoutWriteLocal(language);
 

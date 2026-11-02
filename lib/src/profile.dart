@@ -23,6 +23,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
+import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:adaptive_action_sheet/adaptive_action_sheet.dart';
@@ -71,6 +72,32 @@ class _ProfileState extends State<MyProfile> {
       //   ModalRoute.withName('/'),
       // );
     }
+  }
+
+  _showChunkSizeSheet(LocalSetting localSetting) {
+    final current = localSetting.chunkSizeMB;
+    showAdaptiveActionSheet(
+      context: context,
+      actions: chunkSizePresetsMB
+          .map((mb) => BottomSheetAction(
+                title: Text(
+                  mb == current ? TIM_t_para("{{mb}} MB ✓", "$mb MB ✓")(mb: mb) : "$mb MB",
+                  style: TextStyle(color: theme.primaryColor, fontSize: 18),
+                ),
+                onPressed: (_) {
+                  localSetting.chunkSizeMB = mb;
+                  FileTransferService.instance.chunkSizeBytes = mb * 1024 * 1024;
+                  Navigator.of(context, rootNavigator: true).pop();
+                },
+              ))
+          .toList(),
+      cancelAction: CancelAction(
+        title: Text(
+          TIM_t("取消"),
+          style: const TextStyle(fontSize: 18),
+        ),
+      ),
+    );
   }
 
   changeFriendVerificationMethod(int allowType) async {
@@ -198,6 +225,23 @@ class _ProfileState extends State<MyProfile> {
                       DefTheme.defaultThemeName[themeType]!,
                       textAlign: isWideScreen ? null : TextAlign.end,
                       style: TextStyle(color: theme.primaryColor)),
+                ),
+              ),
+              const SizedBox(
+                height: 10,
+              ),
+              InkWell(
+                onTap: () {
+                  _showChunkSizeSheet(localSetting);
+                },
+                child: TIMUIKitOperationItem(
+                  isEmpty: false,
+                  operationName: TIM_t("大文件分片大小"),
+                  operationRightWidget: Text(
+                    "${localSetting.chunkSizeMB} MB",
+                    textAlign: isWideScreen ? null : TextAlign.end,
+                    style: TextStyle(color: theme.weakTextColor),
+                  ),
                 ),
               ),
               const SizedBox(
