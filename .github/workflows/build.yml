@@ -321,10 +321,23 @@ jobs:
           }
           if (-not (Test-Path $main)) { throw "msi 装完主程序不存在：$main" }
           "msi 装好：$main"
-          # 代码页配错时 light 不报错，直接把中文换成问号，所以把「应用和功能」那张表整个打出来。
-          Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' |
-            Where-Object { $_.DisplayName } | Select-Object -First 60 |
-            ForEach-Object { "ARP: [$($_.DisplayName)]" }
+          # 代码页配错时 light 不报错，只把汉字换成问号，所以把产品名读出来核。
+          # 不查注册表：windows-latest 预装了上百个 MSI 产品，枚举 Uninstall 表捞不到自己那条（实测两次白打）。
+          # 也不看 OLE 摘要：`file x.msi` 的 Subject 在 1252 代码页下会把中文丢掉，显示成空白，跟装完的名字无关。
+          $pn = $null
+          try {
+            $wi = New-Object -ComObject WindowsInstaller.Installer
+            $db = $wi.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $wi, @($msi, 0))
+            $view = $db.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $db, @(
+              "SELECT Value FROM Property WHERE Property='ProductName'"))
+            $null = $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null)
+            $rec = $view.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $view, $null)
+            $pn = $rec.GetType().InvokeMember('StringData', 'GetProperty', $null, $rec, @(1))
+          } catch { Write-Output "::warning::读 msi 的 Property 表失败，产品名没人把关：$_" }
+          if ($pn) {
+            "msi ProductName=[$pn]"
+            if ($pn -ne '可达') { throw "msi 里的 ProductName 不是「可达」：[$pn]" }
+          }
           $u = Start-Process msiexec.exe -ArgumentList '/x', $msi, '/qn' -Wait -PassThru
           "msi 卸载退出码 $($u.ExitCode)"
       - uses: actions/upload-artifact@v4
