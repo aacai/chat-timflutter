@@ -1,18 +1,21 @@
 # chat-timflutter
 
-腾讯云 IM Flutter UIKit 的 demo 工程 fork。上游 [Tencent-RTC/tim_flutter_demo](https://github.com/Tencent-RTC/tim_flutter_demo) 已声明停止维护（原 README.md 就是一则废弃通告），这里保留并继续开发我们自己的即时通讯客户端。
+腾讯云 IM Flutter UIKit 的 demo 工程 fork。上游 [Tencent-RTC/tim_flutter_demo](https://github.com/Tencent-RTC/tim_flutter_demo) 已声明停止维护（原 README.md 就是一则废弃通告），这里保留并继续开发我们自己的即时通讯客户端，产品名叫**可达**。
+
+显示名散在几处，改名要一次改齐：`android/app/src/main/AndroidManifest.xml` 的 `android:label`、`lib/main.dart` 的 `MaterialApp.title`、`macos/Runner/Configs/AppInfo.xcconfig` 的 `PRODUCT_NAME`（`.app` 文件名跟着它走，`Runner.xcodeproj` 里的 `path`/`BuildableName` 和 `INFOPLIST_KEY_CFBundleDisplayName` 要一起改）、`windows/runner/main.cpp` 的窗口标题、`windows/runner/Runner.rc` 的 `FileDescription`/`ProductName`、以及 `packaging/windows/` 那两份安装脚本。三处中文各有编码前提：`.iss` 必须存成 UTF-8 with BOM，MSI 必须 `Language="2052"`（1033 的代码页装不下汉字），C++ 源码里的标题用 `\u` 转义而不是裸中文（runner 没开 `/utf-8`）。安装目录刻意留 ASCII（`Program Files\KeDa`）。iOS 与 Web 侧还是上游名字——没有发布路径经过它们。
 
 ## 本地跑起来
 
 需要 Flutter 3.41.x（CI 用的版本记录在 [.github/workflows/build.yml](.github/workflows/build.yml) 的 `FLUTTER_VERSION`）。
 
 ```bash
-cp lib/im_credentials.example.dart lib/im_credentials.dart   # 填入你的 sdkAppID / secretKey
+cp lib/im_credentials.example.dart lib/im_credentials.dart   # 凭据已入库，直接拷
 flutter pub get
 flutter run
 ```
 
-`lib/im_credentials.dart` 没有入库，`.gitignore` 里挡掉了：里面的 `secretKey` 用来在本地生成 UserSig，一旦提交就等于把 IM 的签名私钥公开。构建时没有它也能编译通过（CI 会退回示例文件），但登录不了。
+`lib/im_credentials.dart` 没入库（`.gitignore` 挡掉了），构建实际读的是它；内容来自入库的 [lib/im_credentials.example.dart](lib/im_credentials.example.dart)，本地和 CI 都是 `cp` 一下。
+这两份凭据是按 2026-11-02 的决定**明文提交**的——本仓公开可读，`secretKey` 谁都能拿到，任何人都能用它给自己签发 UserSig。要收回这个口子，就换掉控制台里的 key 并把 `example` 文件拨回占位值。
 
 `linux/out/` 与 `web/node_modules/` 里有上游误提交的构建产物仍被 git 跟踪，别去动它们做实验。
 
@@ -34,7 +37,7 @@ push 到 `mycustom-feature` 或打 `v*` tag 触发 [build.yml](.github/workflows
 | macos arm64 | macos-latest（arm64 runner，不交叉编 x86_64） | 拖拽式 `chat-timflutter-macos-arm64.dmg`（含 `/Applications` 快捷方式） |
 
 桌面端不发 zip：解压即安装的方式要求用户自己找位置、自己建快捷方式，不算交付。
-Windows 出两枚，装到同一个目录 `Program Files\Tencent Cloud Chat`，但**是两个独立产品，互不覆盖**：
+Windows 出两枚，装到同一个目录 `Program Files\KeDa`（显示名是中文「可达」，路径刻意留 ASCII），但**是两个独立产品，互不覆盖**：
 `.exe` 由 [packaging/windows/setup.iss](packaging/windows/setup.iss) 编（Inno 的 `AppId` 是固定 GUID），
 `.msi` 由 [packaging/windows/msi/product.wxs](packaging/windows/msi/product.wxs) 编（`UpgradeCode` 另一个固定 GUID，
 文件表不手抄——CI 用 `heat.exe` 对整个 Release 目录 harvest，组件 GUID 用 `-g` 播种保证每次构建一致）。
@@ -134,7 +137,8 @@ Android 包是混淆过的：release 开了 R8（`minifyEnabled true`），CI �
 `proguard-rules.pro` 里 `com.tencent.** { *; }` 的整包 keep 是故意留的：SDK 走 JNI 和 Gson 反射，
 收窄它省下的体积不值得换来只在真机上复现的崩溃。
 
-需要在仓库 Secrets 里配 `IM_SDK_APP_ID` 和 `IM_SECRET_KEY`（[.github/actions/im-credentials](.github/actions/im-credentials) 生成 `lib/im_credentials.dart`）。没配也能构建成功，只是产物登录不了。
+凭据不再走 Secrets：[.github/actions/im-credentials](.github/actions/im-credentials) 只做一件事——把入库的 `lib/im_credentials.example.dart` 拷成 `lib/im_credentials.dart`。
+仓库里原来配的 `IM_SDK_APP_ID` / `IM_SECRET_KEY` 已经不参与构建，留着没用，可以自行删掉。
 
 ## 我们自己的功能
 

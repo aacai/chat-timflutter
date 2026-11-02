@@ -4,9 +4,9 @@ import 'package:tencent_cloud_chat_demo/im_credentials.dart';
 enum WebUrl { personalInfo, thirdPartyInfo }
 
 class IMDemoConfig {
-  /// sdkAppID / secretKey 来自未纳入版本管理的 im_credentials.dart。
-  /// 本地开发：复制 im_credentials.example.dart 为 im_credentials.dart 并填入自己的凭据。
-  /// CI：由 .github/workflows 从仓库 Secrets 生成该文件。
+  /// sdkAppID / secretKey 来自 im_credentials.dart（未入库）。
+  /// 本地开发：复制 im_credentials.example.dart 为 im_credentials.dart。
+  /// CI：由 .github/actions/im-credentials 做同一件事，凭据本身在 example 文件里入库。
   static const int sdkAppID = ImCredentials.sdkAppID;
   static const String key = ImCredentials.key;
   static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: "0.0.1");

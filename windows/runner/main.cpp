@@ -29,7 +29,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"Tencent Cloud Chat", origin, size)) {
+  // \u 转义而不是裸中文：runner 没开 /utf-8，MSVC 会按系统代码页解源码，
+  // en-US runner 上裸中文会变成乱码标题。
+  if (!window.Create(L"\u53ef\u8fbe", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

@@ -1,29 +1,7 @@
 name: im-credentials
-description: 生成未入库的 lib/im_credentials.dart；没有 Secrets 时退回示例文件（能编译，但登录不了）
-inputs:
-  sdk-app-id:
-    required: false
-    default: ""
-  secret-key:
-    required: false
-    default: ""
+description: 把入库的 lib/im_credentials.example.dart 拷成构建实际读取的 lib/im_credentials.dart
 runs:
   using: composite
   steps:
     - shell: bash
-      env:
-        IM_SDK_APP_ID: ${{ inputs.sdk-app-id }}
-        IM_SECRET_KEY: ${{ inputs.secret-key }}
-      run: |
-        if [ -z "$IM_SECRET_KEY" ]; then
-          cp lib/im_credentials.example.dart lib/im_credentials.dart
-          exit 0
-        fi
-        case "$IM_SDK_APP_ID" in
-          ""|*[!0-9]*) app_id=0 ;;
-          *) app_id="$IM_SDK_APP_ID" ;;
-        esac
-        esc_key=${IM_SECRET_KEY//\\/\\\\}
-        esc_key=${esc_key//\"/\\\"}
-        printf 'class ImCredentials {\n  static const int sdkAppID = %s;\n  static const String key = "%s";\n}\n' \
-          "$app_id" "$esc_key" > lib/im_credentials.dart
+      run: cp lib/im_credentials.example.dart lib/im_credentials.dart

@@ -28,9 +28,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - uses: ./.github/actions/im-credentials
-        with:
-          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
-          secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - uses: ./.github/actions/patch-uikit-linux
       # 存量告警较多，先只把 error 当失败，告警在日志里单独列。
@@ -55,9 +52,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - uses: ./.github/actions/im-credentials
-        with:
-          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
-          secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - uses: ./.github/actions/patch-uikit-linux
       # app/build.gradle 排掉了 ffmpeg-android-java（那 9M 的 32 位二进制），依据是
@@ -202,9 +196,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - uses: ./.github/actions/im-credentials
-        with:
-          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
-          secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       - run: flutter build windows --release --dart-define=APP_VERSION="$APP_VERSION"
         shell: bash
@@ -241,7 +232,7 @@ jobs:
           $exe = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64-setup.exe'
           if (-not (Test-Path $exe)) { throw "安装包不存在：$exe" }
           $log = Join-Path $env:RUNNER_TEMP 'inno-install.log'
-          $dir = Join-Path ${env:ProgramFiles} 'Tencent Cloud Chat'
+          $dir = Join-Path ${env:ProgramFiles} 'KeDa'
           $main = Join-Path $dir 'im_flutter_uikit_full_platform.exe'
           $unins = Join-Path $dir 'unins000.exe'
           # 只证明「ISCC 绿了」不算交付，这个包真在机器上落地过才算。
@@ -251,6 +242,11 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "静默安装退出码 $($p.ExitCode)" }
           if (-not (Test-Path $main)) { throw "安装后主程序不存在：$main" }
           "装好：$main"
+          # 中文显示名的编码是静默失效的：.iss 少了 BOM 就按 ANSI 读，装完变乱码。
+          # 所以装完直接从卸载表里比对，不对就把这一步判失败。
+          $uninsKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8F4B2A6D-9C1E-4B7A-8E5F-3D0A7C6B1942}_is1'
+          $dn = (Get-ItemProperty $uninsKey).DisplayName
+          if ($dn -ne '可达') { throw "卸载表里的 DisplayName 不是「可达」：[$dn]" }
           if (Test-Path $unins) {
             $u = Start-Process -FilePath $unins -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
             "卸载退出码 $($u.ExitCode)"
@@ -313,7 +309,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $msi = Join-Path $env:GITHUB_WORKSPACE 'chat-timflutter-windows-x64.msi'
           $log = Join-Path $env:RUNNER_TEMP 'msi-install.log'
-          $dir = Join-Path ${env:ProgramFiles} 'Tencent Cloud Chat'
+          $dir = Join-Path ${env:ProgramFiles} 'KeDa'
           $main = Join-Path $dir 'im_flutter_uikit_full_platform.exe'
           $p = Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn', '/l*v', $log -Wait -PassThru
           if ($p.ExitCode -ne 0) {
@@ -346,9 +342,6 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - uses: ./.github/actions/im-credentials
-        with:
-          sdk-app-id: ${{ secrets.IM_SDK_APP_ID }}
-          secret-key: ${{ secrets.IM_SECRET_KEY }}
       - run: flutter pub get
       # macos-14 是 arm64 runner，不交叉编译 x86_64，产物单架构
       - run: flutter build macos --release --dart-define=APP_VERSION="$APP_VERSION"

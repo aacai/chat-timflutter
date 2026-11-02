@@ -87,7 +87,7 @@ class TUIKitDemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
     return MaterialApp(
-      title: 'Tencent Cloud Chat - 腾讯云IM - Flutter',
+      title: '可达',
       debugShowCheckedModeBanner: false,
       locale: TranslationProvider.of(context).flutterLocale, // use provider
       supportedLocales: LocaleSettings.supportedLocales,

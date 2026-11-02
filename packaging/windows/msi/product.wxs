@@ -2,12 +2,15 @@
 <!-- Windows MSI（WiX v3）。文件表不在这里：CI 用 heat.exe 对
      build\windows\x64\runner\Release 整目录 harvest 出 components.wxs，
      组件组名必须对上下面的 AppFiles。
-     MSI 里的字符串只写 ASCII——Language=1033 的代码页装不下中文，写进去会变乱码。 -->
+     产品名是中文，所以 Language 必须是 2052（代码页 936）——
+     Language=1033 的代码页装不下汉字，light 会静默把中文换成问号。 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <?define AppName = "Tencent Cloud Chat" ?>
+  <?define AppName = "可达" ?>
+  <!-- 安装目录用 ASCII，理由跟 Inno 那份一样 -->
+  <?define AppDirName = "KeDa" ?>
   <?define AppExe = "im_flutter_uikit_full_platform.exe" ?>
 
-  <Product Id="*" Name="$(var.AppName)" Language="1033"
+  <Product Id="*" Name="$(var.AppName)" Language="2052" Codepage="936"
            Version="$(var.ProductVersion)" Manufacturer="Tencent Cloud"
            UpgradeCode="{61FECF18-D2E2-4A68-BCC4-D05D19CFDCE4}">
 
@@ -15,12 +18,12 @@
              Description="$(var.AppName) $(var.ProductVersion)" />
 
     <!-- 只按 UpgradeCode 认升级，跟 Inno 那枚 exe 是两个独立产品，互相不覆盖。 -->
-    <MajorUpgrade DowngradeErrorMessage="A newer version of Tencent Cloud Chat is already installed." />
+    <MajorUpgrade DowngradeErrorMessage="已安装更新版本的 $(var.AppName)。" />
     <MediaTemplate EmbedCab="yes" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="ProgramFiles64Folder">
-        <Directory Id="APPLICATIONFOLDER" Name="Tencent Cloud Chat" />
+        <Directory Id="APPLICATIONFOLDER" Name="$(var.AppDirName)" />
       </Directory>
       <Directory Id="ProgramMenuFolder">
         <Directory Id="AppProgramMenuFolder" Name="$(var.AppName)" />

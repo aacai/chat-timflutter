@@ -1,8 +1,12 @@
-; Windows 安装包（Inno Setup 6）。
+﻿; Windows 安装包（Inno Setup 6）。
 ; 版本号从环境变量 APP_VERSION 读（CI 里就是 tag 名）；路径是相对本文件的默认值，
 ; 本地 `flutter build windows` 之后直接 ISCC 这个文件也能出包。
+; 本文件含中文，必须以 UTF-8 with BOM 保存：没有 BOM 时 ISCC 按系统 ANSI 代码页读，
+; 编译照样绿，装完开始菜单和「应用和功能」里的名字变成乱码。
 
-#define MyAppName "Tencent Cloud Chat"
+#define MyAppName "可达"
+; 安装目录用 ASCII：中文路径会进每个原生插件的工作目录，出问题难查，不值得省这一点好看。
+#define MyAppDirName "KeDa"
 #define MyAppPublisher "Tencent Cloud"
 #define MyAppExeName "im_flutter_uikit_full_platform.exe"
 #define MyAppVersion GetEnv("APP_VERSION")
@@ -20,7 +24,7 @@ AppId={{8F4B2A6D-9C1E-4B7A-8E5F-3D0A7C6B1942}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={autopf}\{#MyAppDirName}
 DefaultGroupName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallFilesDir={app}
