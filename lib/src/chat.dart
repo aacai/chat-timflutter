@@ -29,6 +29,9 @@ import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_message.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
   if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
+import 'package:tencent_cloud_chat_sdk/models/v2_tim_text_elem.dart'
+  if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_text_elem.dart';
+import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/chat_life_cycle.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
@@ -59,6 +62,9 @@ class Chat extends StatefulWidget {
 
 class _ChatState extends State<Chat> {
   final TIMUIKitChatController _chatController = TIMUIKitChatController();
+  final TextEditingController _inputController = TextEditingController();
+  /// 发送端本地明文缓存：key 为 msgID，避免自己发出的加密文本在本地显示成密文。
+  final Map<String, String> _myPlaintextCache = {};
   String? backRemark;
   String? conversationName;
 
@@ -88,6 +94,87 @@ class _ChatState extends State<Chat> {
     }
   }
 
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  /// 发送端加密文本：用对端公钥封套，密钥由会话 ID 派生；群聊或无公钥降级明文。
+  /// 发送后把明文按 msgID 缓存，供本地显示，避免自己看到密文气泡。
+  Future<void> _sendEncryptedText(String raw) async {
+    final text = raw.trim();
+    if (text.isEmpty) return;
+    final conv = widget.selectedConversation;
+    final peerUserID = EncryptionService.isC2C(conv.conversationID ?? '')
+        ? conv.userID
+        : null;
+    final cipher = await EncryptionService.instance.encryptText(
+      peerUserID: peerUserID ?? '',
+      conversationID: conv.conversationID ?? '',
+      plain: text,
+    );
+    final msg = V2TimMessage(
+      elemType: MessageElemType.V2TIM_ELEM_TYPE_TEXT,
+      textElem: V2TimTextElem(text: cipher),
+    );
+    final res = await _chatController.sendMessage(messageInfo: msg);
+    final id = res?.data?.msgID;
+    if (id != null && id.isNotEmpty) {
+      _myPlaintextCache[id] = text;
+    }
+    _inputController.clear();
+  }
+
+  /// 替换默认输入框：纯文本加密输入 + 文件入口（文件走分片端到端加密）。
+  /// 注：原生表情/语音/视频面板随默认输入区一并替换，暂未接入。
+  Widget _buildEncryptedInput(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
+    return Container(
+      color: theme.weakBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _inputController,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendEncryptedText(_inputController.text),
+                decoration: InputDecoration(
+                  hintText: TIM_t("输入消息（端到端加密）"),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: theme.weakDividerColor,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.attachment, color: theme.weakTextColor),
+              onPressed: _pickAndSendFile,
+              tooltip: TIM_t("发送文件"),
+            ),
+            IconButton(
+              icon: Icon(Icons.send, color: theme.primaryColor),
+              onPressed: () => _sendEncryptedText(_inputController.text),
+              tooltip: TIM_t("发送"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // 收到分片时交给传输服务；补齐后自动合并，合并结果由文件气泡指向。
   void _feedChunkMessage(V2TimMessage message) {
     FileTransferService.instance.onChunkMessage(message).catchError((e) {
@@ -102,6 +189,12 @@ class _ChatState extends State<Chat> {
     if (text == null ||
         !SecureChannel.looksEncrypted(text) ||
         !EncryptionService.isC2C(convID)) {
+      return message;
+    }
+    // 发送端自己刚发出的加密文本：用本地明文缓存显示，避免看到密文气泡。
+    final id = message.msgID;
+    if (id != null && _myPlaintextCache.containsKey(id)) {
+      message.textElem?.text = _myPlaintextCache[id];
       return message;
     }
     final plain = await EncryptionService.instance
@@ -230,6 +323,8 @@ class _ChatState extends State<Chat> {
         conversation: widget.selectedConversation,
         conversationShowName: conversationName ?? _getTitle(),
         controller: _chatController,
+        // 自定义输入区：文本走端到端加密，文件入口保留（分片端到端加密）。
+        textFieldBuilder: _buildEncryptedInput,
         lifeCycle: ChatLifeCycle(newMessageWillMount: (V2TimMessage message) async {
           _feedChunkMessage(message);
           return await _decryptIncoming(message);
@@ -386,25 +481,8 @@ class _ChatState extends State<Chat> {
             }
           },
         ),
-        morePanelConfig: MorePanelConfig(
-          showFilePickAction: false,
-          showVideoCall: true,
-          showVoiceCall: true,
-          extraAction: [
-            MorePanelItem(
-              id: 'file',
-              icon: Container(
-                height: 64,
-                width: 64,
-                margin: const EdgeInsets.only(bottom: 4),
-                decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.all(Radius.circular(5))),
-                child: Icon(Icons.insert_drive_file_outlined, color: hexToColor("5c6168"), size: 26),
-              ),
-              title: TIM_t("文件"),
-              onTap: (context) => _pickAndSendFile(),
-            ),
-          ],
-        ),
+        // 自定义输入区已接管发送入口，默认 more 面板（文件/语音/视频）不再渲染，
+        // 文件入口已在 _buildEncryptedInput 中保留；语音/视频的通话面板为已知待补项。
         appBarConfig: AppBar(
           actions: [
             IconButton(
