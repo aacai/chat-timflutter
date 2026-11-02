@@ -77,6 +77,7 @@ class _ProfileState extends State<MyProfile> {
   }
 
   _showChunkSizeSheet(LocalSetting localSetting) {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
     final current = localSetting.chunkSizeMB;
     showAdaptiveActionSheet(
       context: context,

@@ -185,7 +185,7 @@ class _ChatState extends State<Chat> {
   /// 入站文本消息解密：仅 C2C 且带加密前缀才尝试；失败/无前缀原样返回，保证不丢消息。
   Future<V2TimMessage> _decryptIncoming(V2TimMessage message) async {
     final text = message.textElem?.text;
-    final convID = message.conversationID ?? '';
+    final convID = widget.selectedConversation.conversationID ?? '';
     if (text == null ||
         !SecureChannel.looksEncrypted(text) ||
         !EncryptionService.isC2C(convID)) {

@@ -69,7 +69,7 @@ class LocalSetting with ChangeNotifier {
   set chunkSizeMB(int value) {
     _chunkSizeMB = value;
     notifyListeners();
-    updateSettingsToLocal("chunkSizeMB", value);
+    _prefs.then((prefs) => prefs.setInt("chunkSizeMB", value));
   }
 
   loadSettingsFromLocal() async {
