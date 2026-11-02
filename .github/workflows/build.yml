@@ -321,6 +321,10 @@ jobs:
           }
           if (-not (Test-Path $main)) { throw "msi 装完主程序不存在：$main" }
           "msi 装好：$main"
+          # 代码页配错时 light 不报错，直接把中文换成问号，所以把「应用和功能」那张表整个打出来。
+          Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+            Where-Object { $_.DisplayName } | Select-Object -First 60 |
+            ForEach-Object { "ARP: [$($_.DisplayName)]" }
           $u = Start-Process msiexec.exe -ArgumentList '/x', $msi, '/qn' -Wait -PassThru
           "msi 卸载退出码 $($u.ExitCode)"
       - uses: actions/upload-artifact@v4
@@ -359,7 +363,17 @@ jobs:
           stage=$(mktemp -d)
           ditto "$app" "$stage/$name"
           ln -s /Applications "$stage/Applications"
-          hdiutil create -volname "${name%.app}" -srcfolder "$stage" -ov -format UDZO "$dmg"
+          # hdiutil create 在 macos runner 上会偶发「Resource busy」——同一份代码上一轮还是绿的，
+          # 挂着的残留卷也能导致它，所以先把检查用的挂载点强卸，再给它三次机会。
+          hdiutil detach /Volumes/ctc-check -force >/dev/null 2>&1 || true
+          for i in 1 2 3; do
+            if hdiutil create -volname "${name%.app}" -srcfolder "$stage" -ov -format UDZO "$dmg"; then
+              break
+            fi
+            if [ "$i" = 3 ]; then exit 1; fi
+            echo "hdiutil create 失败，重试 $i/3"
+            sleep 20
+          done
           # 挂载回来验交付：包在不在、快捷方式在不在、ad-hoc 签名有没有被 hdiutil 破坏。
           hdiutil attach -nobrowse -readonly -mountpoint /Volumes/ctc-check "$dmg" >/dev/null
           test -d "/Volumes/ctc-check/$name/Contents/MacOS"
