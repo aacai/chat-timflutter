@@ -36,7 +36,7 @@ dependencies:
   # Tencent Cloud Chat dependencies:
   # 锁到本机验证过的版本：这几个包的 pubspec.lock 没入库，CI 每次挑最新版会连带换掉
   # macOS/iOS 的原生 pod（8.9.7545 就是这样把 macos 构建搞挂的）。
-  tencent_cloud_chat_uikit: 5.0.1+4
+  tencent_cloud_chat_uikit: 5.0.1+5
   tencent_calls_uikit: 2.9.3
   tencent_cloud_chat_push: 8.8.7375
   tencent_chat_i18n_tool: ^2.3.8
