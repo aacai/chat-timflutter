@@ -17,6 +17,8 @@ import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/calling_message_data_provider.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/custom_message_element.dart';
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
+import 'package:tencent_cloud_chat_demo/utils/secure_channel/encryption_service.dart';
+import 'package:tencent_cloud_chat_demo/utils/secure_channel/secure_channel.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/enum/group_type.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
@@ -76,7 +78,11 @@ class _ChatState extends State<Chat> {
       return;
     }
     try {
-      await FileTransferService.instance.send(controller: _chatController, sourcePath: sourcePath);
+      await FileTransferService.instance.send(
+        controller: _chatController,
+        sourcePath: sourcePath,
+        conversationID: widget.selectedConversation.conversationID ?? '',
+      );
     } catch (e) {
       ToastUtils.toast(TIM_t("文件发送失败") + "$e");
     }
@@ -87,6 +93,23 @@ class _ChatState extends State<Chat> {
     FileTransferService.instance.onChunkMessage(message).catchError((e) {
       debugPrint('分片处理失败：$e');
     });
+  }
+
+  /// 入站文本消息解密：仅 C2C 且带加密前缀才尝试；失败/无前缀原样返回，保证不丢消息。
+  Future<V2TimMessage> _decryptIncoming(V2TimMessage message) async {
+    final text = message.textElem?.text;
+    final convID = message.conversationID ?? '';
+    if (text == null ||
+        !SecureChannel.looksEncrypted(text) ||
+        !EncryptionService.isC2C(convID)) {
+      return message;
+    }
+    final plain = await EncryptionService.instance
+        .decryptText(conversationID: convID, envelope: text);
+    if (plain != text) {
+      message.textElem?.text = plain;
+    }
+    return message;
   }
 
   _onTapAvatar(String userID, TapDownDetails tapDetails, TUITheme theme) {
@@ -209,16 +232,18 @@ class _ChatState extends State<Chat> {
         controller: _chatController,
         lifeCycle: ChatLifeCycle(newMessageWillMount: (V2TimMessage message) async {
           _feedChunkMessage(message);
-          return message;
+          return await _decryptIncoming(message);
         }, didGetHistoricalMessageList: (List<V2TimMessage> messageList) async {
           // 上次没合并完的传输，进会话时补齐分片继续合并。
           for (final message in messageList) {
             _feedChunkMessage(message);
           }
-          return messageList;
+          // 历史消息入站解密（异步钩子，可解密）。
+          return await Future.wait(messageList.map(_decryptIncoming));
         }, messageShouldMount: (V2TimMessage message) {
           return !FileTransferService.shouldHide(message.cloudCustomData);
         }, messageListShouldMount: (messageList) {
+          // 同步钩子，无法等待解密；解密已在 didGetHistoricalMessageList / newMessageWillMount 完成。
           List<V2TimMessage> list = [];
           for (V2TimMessage message in messageList) {
             CallingMessageDataProvider provide = CallingMessageDataProvider(message);

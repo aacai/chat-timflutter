@@ -19,6 +19,9 @@ class ChunkHeader {
   final int chunkSize;
   final String chunkMd5;
 
+  /// 该分片是否经过端到端加密（字节已被加密信封替换）。
+  final bool encrypted;
+
   const ChunkHeader({
     required this.fileId,
     required this.fileName,
@@ -27,6 +30,7 @@ class ChunkHeader {
     required this.index,
     required this.chunkSize,
     required this.chunkMd5,
+    this.encrypted = false,
   });
 
   Map<String, dynamic> _toJson() => {
@@ -38,6 +42,7 @@ class ChunkHeader {
         "idx": index,
         "csize": chunkSize,
         "md5": chunkMd5,
+        "enc": encrypted,
       };
 
   String encode() => jsonEncode(_toJson());
@@ -60,6 +65,7 @@ class ChunkHeader {
         index: (json["idx"] as num?)?.toInt() ?? -1,
         chunkSize: (json["csize"] as num?)?.toInt() ?? 0,
         chunkMd5: json["md5"] as String? ?? "",
+        encrypted: json["enc"] as bool? ?? false,
       );
     } catch (_) {
       return null;
@@ -148,10 +154,14 @@ class ChunkCodec {
   }
 
   /// 按 [expected] 里的顺序和大小合并分片并逐片校验 MD5，写临时文件再改名，避免留下半个文件。
+  ///
+  /// [encrypted] 为 true 时，[decrypt] 必须提供：每片先解密再拼接，最终大小对齐 [ChunkHeader.fileSize]。
   static Future<String> merge({
     required List<ChunkHeader> expected,
     required Map<int, String> chunkPathByIndex,
     required String destinationPath,
+    bool encrypted = false,
+    Future<Uint8List> Function(Uint8List)? decrypt,
   }) async {
     final totalBytes = expected.fold<int>(0, (sum, header) {
       final path = chunkPathByIndex[header.index];
@@ -170,6 +180,14 @@ class ChunkCodec {
         if (!await chunkFile.exists()) {
           throw FileSystemException("分片文件不存在", path);
         }
+        if (encrypted) {
+          if (decrypt == null) {
+            throw StateError("加密分片缺少解密器");
+          }
+          final plain = await decrypt(await chunkFile.readAsBytes());
+          sink.add(plain);
+          continue;
+        }
         if (await chunkFile.length() != header.chunkSize) {
           throw const FormatException("分片大小与元数据不符");
         }
@@ -182,7 +200,11 @@ class ChunkCodec {
     } finally {
       await sink.close();
     }
-    if (totalBytes > 0 && await out.length() != totalBytes) {
+    if (encrypted) {
+      if (await out.length() != (expected.first.fileSize)) {
+        throw const FormatException("解密合并后大小与元数据不符");
+      }
+    } else if (totalBytes > 0 && await out.length() != totalBytes) {
       throw const FormatException("合并后大小与元数据不符");
     }
     final target = File(destinationPath);

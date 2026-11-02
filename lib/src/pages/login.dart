@@ -19,6 +19,7 @@ import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/GenerateTestUserSig.dart';
 import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/commonUtils.dart';
+import 'package:tencent_cloud_chat_demo/utils/secure_channel/encryption_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
@@ -307,6 +308,9 @@ class _LoginFormState extends State<LoginForm> {
 
       // 登录成功后才落盘登录态，保存失败不影响本次会话。
       await saveUserInfo();
+
+      // 生成并发布端到端加密身份公钥（个人签名），供对端取用。
+      await EncryptionService.instance.init();
 
       directToHomePage();
     } finally {

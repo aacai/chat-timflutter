@@ -24,6 +24,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
+import 'package:tencent_cloud_chat_demo/utils/secure_channel/encryption_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:adaptive_action_sheet/adaptive_action_sheet.dart';
@@ -65,6 +66,7 @@ class _ProfileState extends State<MyProfile> {
 
     if (res.code == 0) {
       await AutoLoginStore.clearAll();
+      EncryptionService.instance.clearPeerCache();
       Routes().directToLoginPage();
 
       // Navigator.of(context).pushAndRemoveUntil(

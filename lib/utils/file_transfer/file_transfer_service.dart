@@ -11,6 +11,7 @@ import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
 import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
 import 'package:tencent_cloud_chat_uikit/ui/controller/tim_uikit_chat_controller.dart';
 
+import '../secure_channel/encryption_service.dart';
 import 'chunk_codec.dart';
 
 /// 一次大文件传输的本地记录：发送端记源文件，接收端记合并结果。
@@ -135,15 +136,23 @@ class FileTransferService {
   }
 
   /// 统一的文件发送入口：未超限按普通文件发，超限切片逐片发，界面看到的都是同一条文件气泡。
+  ///
+  /// [conversationID] 用于派生会话密钥与识别 C2C/群聊：仅 C2C 启用端到端加密，
+  /// 群聊或拿不到对端公钥时退化为明文，保证消息不丢。
   Future<void> send({
     required TIMUIKitChatController controller,
     required String sourcePath,
+    required String conversationID,
   }) async {
     final fileSize = await File(sourcePath).length();
     if (fileSize == 0) {
       throw ArgumentError("不支持 0KB 文件的传输");
     }
     final fileName = p.basename(sourcePath);
+    final peerUserID = EncryptionService.isC2C(conversationID)
+        ? _peerUserIDOf(conversationID)
+        : null;
+
     if (fileSize < singleFileLimitBytes) {
       await _sendPart(
         controller: controller,
@@ -164,9 +173,26 @@ class FileTransferService {
     );
     try {
       for (final part in parts) {
+        final bytes = await File(part.path).readAsBytes();
+        final enc = await EncryptionService.instance.encryptFile(
+          peerUserID: peerUserID ?? '',
+          context: fileId,
+          data: bytes,
+        );
+        final isEncrypted = !identical(enc, bytes);
+        late final String partPath;
+        late final int partSize;
+        if (isEncrypted) {
+          partPath = p.join(dir.path, '${fileId}.part${part.index}.enc');
+          await File(partPath).writeAsBytes(enc);
+          partSize = enc.length;
+        } else {
+          partPath = part.path;
+          partSize = part.size;
+        }
         await _sendPart(
           controller: controller,
-          partPath: part.path,
+          partPath: partPath,
           fileName: fileName,
           header: ChunkHeader(
             fileId: fileId,
@@ -174,8 +200,9 @@ class FileTransferService {
             fileSize: fileSize,
             totalChunks: parts.length,
             index: part.index,
-            chunkSize: part.size,
+            chunkSize: partSize,
             chunkMd5: part.md5,
+            encrypted: isEncrypted,
           ),
         );
       }
@@ -190,6 +217,15 @@ class FileTransferService {
     } finally {
       await ChunkCodec.deleteChunks(parts.map((e) => e.path));
     }
+  }
+
+  /// C2C 会话 ID 形如 c2c_<userID>，取出对端 userID；其它返回 null。
+  static String? _peerUserIDOf(String conversationID) {
+    const prefix = 'c2c_';
+    if (conversationID.startsWith(prefix) && conversationID.length > prefix.length) {
+      return conversationID.substring(prefix.length);
+    }
+    return null;
   }
 
   /// [header] 为空就是普通文件；非空时把气泡伪装成整个文件，并且只有第 0 片计入未读。
@@ -321,6 +357,11 @@ class FileTransferService {
         expected: ordered,
         chunkPathByIndex: transfer.paths,
         destinationPath: destination,
+        encrypted: transfer.encrypted,
+        decrypt: transfer.encrypted
+            ? (data) =>
+                EncryptionService.instance.decryptFile(context: transfer.fileId, data: data)
+            : null,
       );
       _records[transfer.fileId] = TransferRecord(
         fileId: transfer.fileId,
@@ -361,11 +402,13 @@ class _PendingTransfer {
   _PendingTransfer(ChunkHeader first)
       : fileName = first.fileName,
         totalChunks = first.totalChunks,
-        fileId = first.fileId;
+        fileId = first.fileId,
+        encrypted = first.encrypted;
 
   final String fileId;
   final String fileName;
   final int totalChunks;
+  final bool encrypted;
   final Map<int, ChunkHeader> headers = {};
   final Map<int, String> paths = {};
   bool merging = false;
