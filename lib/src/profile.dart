@@ -235,6 +235,28 @@ class _ProfileState extends State<MyProfile> {
               ),
               InkWell(
                 onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SkinPage(),
+                    ),
+                  );
+                },
+                child: TIMUIKitOperationItem(
+                  isEmpty: false,
+                  operationName: TIM_t("夜间模式"),
+                  operationRightWidget: Text(
+                    Provider.of<DefaultThemeData>(context).darkMode.label,
+                    textAlign: isWideScreen ? null : TextAlign.end,
+                    style: TextStyle(color: theme.weakTextColor),
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 10,
+              ),
+              InkWell(
+                onTap: () {
                   _showChunkSizeSheet(localSetting);
                 },
                 child: TIMUIKitOperationItem(
