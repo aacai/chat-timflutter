@@ -141,12 +141,15 @@ class _ChatState extends State<Chat> {
             Expanded(
               child: TextField(
                 controller: _inputController,
+                style: TextStyle(color: theme.darkTextColor, fontSize: 16),
+                cursorColor: theme.primaryColor,
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendEncryptedText(_inputController.text),
                 decoration: InputDecoration(
                   hintText: TIM_t("输入消息（端到端加密）"),
+                  hintStyle: TextStyle(color: theme.weakTextColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: BorderSide.none,

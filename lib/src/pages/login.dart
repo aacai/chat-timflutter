@@ -140,6 +140,7 @@ class _LoginFormState extends State<LoginForm> {
   String userID = 'n';
   final TextEditingController _userIdController = TextEditingController(text: 'n');
   bool _autoLogin = true;
+  String? _loginError;
 
   @override
   initState() {
@@ -283,6 +284,9 @@ class _LoginFormState extends State<LoginForm> {
       ToastUtils.toast(TIM_t("请在 im_credentials.dart 中输入 sdkAppID 和 key"));
       return;
     }
+    setState(() {
+      _loginError = null;
+    });
     _isLoggingIn = true;
     try {
       GenerateTestUserSig generateTestUserSig = GenerateTestUserSig(
@@ -300,7 +304,11 @@ class _LoginFormState extends State<LoginForm> {
       );
       if (data.code != 0) {
         final option1 = data.desc;
-        ToastUtils.toast(TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1));
+        final msg = TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1);
+        setState(() {
+          _loginError = msg;
+        });
+        ToastUtils.toast(msg);
         // 自动登录失败不再保留开关，交给用户手动登录，避免反复弹登录失败。
         await _disableAutoLogin();
         return;
@@ -313,6 +321,13 @@ class _LoginFormState extends State<LoginForm> {
       await EncryptionService.instance.init();
 
       directToHomePage();
+    } catch (e) {
+      // 登录过程抛异常（网络/SDK 等）时静默失败无提示，这里显式暴露原因。
+      final msg = "登录失败：$e";
+      setState(() {
+        _loginError = msg;
+      });
+      ToastUtils.toast(msg);
     } finally {
       _isLoggingIn = false;
     }
@@ -392,6 +407,22 @@ class _LoginFormState extends State<LoginForm> {
                         ),
                       ],
                     ),
+                    if (_loginError != null)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: CommonUtils.adaptHeight(16),
+                          left: CommonUtils.adaptWidth(8),
+                          right: CommonUtils.adaptWidth(8),
+                        ),
+                        child: Text(
+                          _loginError!,
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: CommonUtils.adaptFontSize(26),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     Container(
                       margin: EdgeInsets.only(
                         top: CommonUtils.adaptHeight(20),
