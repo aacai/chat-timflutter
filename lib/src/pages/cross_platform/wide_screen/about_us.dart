@@ -78,6 +78,9 @@ class _AboutUsState extends State<AboutUs> {
                   webViewLink("  |  "),
                   webViewLink("源代码",
                       "https://github.com/TencentCloud/chat-demo-flutter"),
+                  webViewLink("  |  "),
+                  webViewLink("GitHub 项目",
+                      "https://github.com/aacai/chat-timflutter"),
                 ])),
                 const SizedBox(
                   height: 4,
