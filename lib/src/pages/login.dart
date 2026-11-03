@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_calls_uikit/tencent_calls_uikit.dart';
@@ -47,17 +46,23 @@ class AppLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return GestureDetector(
       onTap: () {
         SystemChannels.textInput.invokeMethod('TextInput.hide');
       },
-      child: Stack(
-        children: [
-          const AppLogo(),
-          LoginForm(
-            initIMSDK: initIMSDK,
-          ),
-        ],
+      child: Container(
+        color: theme.weakBackgroundColor,
+        child: Column(
+          children: [
+            const AppLogo(),
+            Expanded(
+              child: LoginForm(
+                initIMSDK: initIMSDK,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -68,60 +73,60 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double height = MediaQuery.of(context).size.height;
     final theme = Provider.of<DefaultThemeData>(context).theme;
-    return Stack(
-      alignment: Alignment.topCenter,
-      children: [
-        Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [theme.lightPrimaryColor ?? CommonColor.lightPrimaryColor, theme.primaryColor ?? CommonColor.primaryColor]),
-            ),
-            child: Image.asset("assets/hero_image.png", color: Colors.transparent, width: MediaQuery.of(context).size.width, height: 500)),
-        Positioned(
-          child: Container(
-            padding: EdgeInsets.only(top: height / 30, left: 24),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                SizedBox(
-                  height: CommonUtils.adaptWidth(380),
-                  width: CommonUtils.adaptWidth(140),
-                  child: const Image(
-                    image: AssetImage("assets/logo_transparent.png"),
-                  ),
-                ),
-                Expanded(
-                    child: Container(
-                  margin: const EdgeInsets.only(right: 5),
-                  height: CommonUtils.adaptHeight(180),
-                  padding: const EdgeInsets.only(top: 10, left: 12, right: 15),
-                  child: Column(
-                    children: <Widget>[
-                      Text(
-                        TIM_t("腾讯云即时通信IM"),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: CommonUtils.adaptFontSize(58),
-                        ),
-                      ),
-                      Text(
-                        TIM_t("欢迎使用本 APP 体验腾讯云 IM 产品服务"),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: CommonUtils.adaptFontSize(26),
-                        ),
-                      ),
-                    ],
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                  ),
-                )),
-              ],
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 48,
+        bottom: 40,
+        left: 24,
+        right: 24,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.lightPrimaryColor ?? CommonColor.lightPrimaryColor,
+            theme.primaryColor ?? CommonColor.primaryColor
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 64,
+            width: 64,
+            child: Image.asset(
+              "assets/logo_transparent.png",
+              color: Colors.white,
+              fit: BoxFit.contain,
             ),
           ),
-        )
-      ],
+          const SizedBox(height: 24),
+          Text(
+            TIM_t("腾讯云即时通信IM"),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            TIM_t("欢迎使用本 APP 体验腾讯云 IM 产品服务"),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -335,117 +340,147 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(
-      context,
-      designSize: const Size(750, 1624),
-      minTextAdapt: true,
-    );
-    return Stack(
-      children: [
-        Positioned(
-            bottom: CommonUtils.adaptHeight(200),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
-              decoration: const BoxDecoration(
-                //背景
-                color: Colors.white,
+    final theme = Provider.of<DefaultThemeData>(context).theme;
+    final primary = theme.primaryColor ?? CommonColor.primaryColor;
 
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(30.0), topRight: Radius.circular(30.0), bottomLeft: Radius.circular(30.0), bottomRight: Radius.circular(30.0)),
-                //设置四周边框
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.weakBackgroundColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Form(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                TIM_t("用户名"),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  color: theme.darkTextColor,
+                ),
               ),
-              // color: Colors.white,
-              height: MediaQuery.of(context).size.height - CommonUtils.adaptHeight(600),
-
-              width: MediaQuery.of(context).size.width,
-              child: Form(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(top: CommonUtils.adaptFontSize(34)),
-                      child: Text(
-                        TIM_t("用户名"),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: CommonUtils.adaptFontSize(34),
-                        ),
-                      ),
-                    ),
-                    TextField(
-                      controller: _userIdController,
-                      autofocus: false,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.only(left: CommonUtils.adaptWidth(14)),
-                        hintText: TIM_t("请输入用户名"),
-                        hintStyle: TextStyle(fontSize: CommonUtils.adaptFontSize(32)),
-                        //
-                      ),
-                      keyboardType: TextInputType.text,
-                      onChanged: (v) {
+              const SizedBox(height: 8),
+              TextField(
+                controller: _userIdController,
+                autofocus: false,
+                style: TextStyle(
+                  color: theme.darkTextColor,
+                  fontSize: 16,
+                ),
+                decoration: InputDecoration(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  hintText: TIM_t("请输入用户名"),
+                  hintStyle:
+                      TextStyle(fontSize: 15, color: theme.weakTextColor),
+                  filled: true,
+                  fillColor: theme.weakBackgroundColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                        color: theme.weakDividerColor ?? Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        BorderSide(color: primary, width: 1.5),
+                  ),
+                ),
+                keyboardType: TextInputType.text,
+                onChanged: (v) {
+                  setState(() {
+                    userID = v;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Checkbox(
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      value: _autoLogin,
+                      activeColor: primary,
+                      onChanged: (bool? value) {
                         setState(() {
-                          userID = v;
+                          _autoLogin = value ?? false;
                         });
                       },
                     ),
-                    SizedBox(height: CommonUtils.adaptHeight(20)),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _autoLogin,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _autoLogin = value ?? false;
-                            });
-                          },
-                        ),
-                        Text(
-                          TIM_t("自动登录"),
-                          style: TextStyle(
-                            fontSize: CommonUtils.adaptFontSize(28),
-                            color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    TIM_t("自动登录"),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.weakTextColor,
+                    ),
+                  ),
+                ],
+              ),
+              if (_loginError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Text(
+                    _loginError!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _isLoggingIn ? null : userLogin,
+                  child: _isLoggingIn
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          TIM_t("登录"),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ],
-                    ),
-                    if (_loginError != null)
-                      Padding(
-                        padding: EdgeInsets.only(
-                          top: CommonUtils.adaptHeight(16),
-                          left: CommonUtils.adaptWidth(8),
-                          right: CommonUtils.adaptWidth(8),
-                        ),
-                        child: Text(
-                          _loginError!,
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: CommonUtils.adaptFontSize(26),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    Container(
-                      margin: EdgeInsets.only(
-                        top: CommonUtils.adaptHeight(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              child: Text(TIM_t("登录")),
-                              onPressed: userLogin,
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(),
-                    )
-                  ],
                 ),
               ),
-            ))
-      ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

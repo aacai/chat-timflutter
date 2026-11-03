@@ -1,6 +1,8 @@
 // ignore_for_file: prefer_typing_uninitialized_variables
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 
 /// 点击事件
@@ -65,35 +67,30 @@ class _ShareWidgetState extends State<ShareWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return SizedBox(
       height: 200,
       child: Container(
-        // margin: const EdgeInsets.only(left: 10, right: 10),
-        //边框设置
         decoration: BoxDecoration(
-          //背景
-          color: hexToColor('E9E9EA'),
-          //设置四周边框
+          color: theme.weakBackgroundColor,
           border: Border.all(
             width: 1,
-            color: hexToColor('E9E9EA'),
+            color: theme.weakDividerColor ?? Colors.transparent,
           ),
-          //设置四周圆角角度
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(10.0),
             topRight: Radius.circular(10.0),
           ),
         ),
-        //设置 child 居中
         alignment: Alignment.center,
         child: Padding(
           padding: const EdgeInsets.all(10.0),
           child: Column(
             children: [
-              const Center(
+              Center(
                 child: Text(
                   '分享到',
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: 18, color: theme.darkTextColor),
                 ),
               ),
               const SizedBox(
@@ -122,14 +119,15 @@ class _ShareWidgetState extends State<ShareWidget> {
                               alignment: Alignment.center,
                               height: 50,
                               width: 50,
-                              decoration: const BoxDecoration(
-                                  color: Colors.white,
+                              decoration: BoxDecoration(
+                                  color: theme.weakBackgroundColor,
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(5))),
                               child: widget.list[index].img,
                             ),
                           ),
-                          Text(widget.list[index].title)
+                          Text(widget.list[index].title,
+                              style: TextStyle(color: theme.darkTextColor))
                         ],
                       ),
                     );

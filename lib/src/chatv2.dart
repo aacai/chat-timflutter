@@ -7,6 +7,9 @@ import 'package:tencent_cloud_chat_uikit/business_logic/separate_models/tui_chat
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/ui/controller/tim_uikit_chat_controller.dart';
+import 'package:provider/provider.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_uikit/ui/theme/tim_uikit_message_theme.dart';
 
 class ChatV2 extends StatefulWidget {
   final V2TimConversation selectedConversation;
@@ -52,6 +55,7 @@ class _ChatV2State extends State<ChatV2> {
   Widget build(BuildContext context) {
     final isBuild = isInit;
     isInit = true;
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return TIMUIKitChatProviderScope(
       isBuild: isBuild,
       controller: _controller,
@@ -86,30 +90,21 @@ class _ChatV2State extends State<ChatV2> {
                       onLoadMore: loadHistoryMessageList,
                       itemBuilder: (context, message) {
                         return TIMUIKitHistoryMessageListItem(
-                          // messageItemBuilder: MessageItemBuilder(
-                          //   textReplyMessageItemBuilder:
-                          //       (message, isShowJump, clearJump) {},
-                          // ),
-                          // themeData: MessageThemeData(
-                          //     messageBackgroundColor: Colors.black,
-                          //     messageTextStyle: TextStyle(color: Colors.redAccent)),
-                          topRowBuilder: (context, message) {
-                            return const Row(
-                              children: [Text("this is top Raw builder")],
-                            );
-                          },
                           showMessageReadReceipt: false,
                           onScrollToIndex:
                               _historyMessageListController.scrollToIndex,
                           onScrollToIndexBegin:
                               _historyMessageListController.scrollToIndexBegin,
                           message: message!,
-                          // onTapAvatar: widget.onTapAvatar,
-                          // showNickName: widget.showNickName,
-                          // messageItemBuilder: widget.messageItemBuilder,
-                          // onLongPressForOthersHeadPortrait:
-                          //     widget.onLongPressForOthersHeadPortrait,
-                          // onMsgSendFailIconTap: widget.onMsgSendFailIconTap,
+                          themeData: MessageThemeData(
+                            messageBackgroundColor: theme.weakBackgroundColor,
+                            messageTextStyle:
+                                TextStyle(color: theme.darkTextColor),
+                            nickNameTextStyle:
+                                TextStyle(color: theme.weakTextColor),
+                            timelineTextStyle:
+                                TextStyle(color: theme.weakTextColor),
+                          ),
                         );
                       },
                     );

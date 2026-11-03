@@ -12,6 +12,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/request.dart';
+import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
@@ -243,16 +244,45 @@ class SettingsState extends State<Settings> {
             secondTitle(TIM_t("外观"), true),
             Row(
               children: [
-                Radio(value: 1, groupValue: 1, onChanged: (_) {}),
+                Radio<DarkModeType>(
+                  value: DarkModeType.light,
+                  groupValue: Provider.of<DefaultThemeData>(context).darkMode,
+                  onChanged: (mode) {
+                    if (mode != null) {
+                      Provider.of<DefaultThemeData>(context, listen: false)
+                          .darkMode = mode;
+                    }
+                  },
+                ),
                 Text(TIM_t("浅色模式")),
                 const SizedBox(
                   width: 30,
                 ),
-                Radio(value: 2, groupValue: 1, onChanged: (_) {}),
-                Text(
-                  TIM_t("深色模式 (开发中)"),
-                  style: TextStyle(color: theme.weakTextColor),
-                )
+                Radio<DarkModeType>(
+                  value: DarkModeType.dark,
+                  groupValue: Provider.of<DefaultThemeData>(context).darkMode,
+                  onChanged: (mode) {
+                    if (mode != null) {
+                      Provider.of<DefaultThemeData>(context, listen: false)
+                          .darkMode = mode;
+                    }
+                  },
+                ),
+                Text(TIM_t("深色模式")),
+                const SizedBox(
+                  width: 30,
+                ),
+                Radio<DarkModeType>(
+                  value: DarkModeType.system,
+                  groupValue: Provider.of<DefaultThemeData>(context).darkMode,
+                  onChanged: (mode) {
+                    if (mode != null) {
+                      Provider.of<DefaultThemeData>(context, listen: false)
+                          .darkMode = mode;
+                    }
+                  },
+                ),
+                Text(TIM_t("跟随系统")),
               ],
             ),
             secondTitle(TIM_t("主题"), false),

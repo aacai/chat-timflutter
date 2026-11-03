@@ -22,6 +22,7 @@ import 'package:tencent_cloud_chat_demo/src/pages/login.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/theme_profile_widgets.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/secure_channel/encryption_service.dart';
@@ -190,7 +191,7 @@ class _ProfileState extends State<MyProfile> {
                             controller: _timuiKitProfileController)),
                   );
                 },
-                child: TIMUIKitProfileUserInfoCard(
+                child: ThemeUserInfoCard(
                   userInfo: userProfile,
                   showArrowRightIcon: true,
                 ),
@@ -202,7 +203,7 @@ class _ProfileState extends State<MyProfile> {
                   onTap: () {
                     showApplicationTypeSheet(theme);
                   },
-                  child: TIMUIKitOperationItem(
+                  child: ThemeOperationItem(
                     isEmpty: false,
                     operationName: TIM_t("加我为好友的方式"),
                     operationRightWidget: Text(
@@ -221,7 +222,7 @@ class _ProfileState extends State<MyProfile> {
                     ),
                   );
                 },
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                   isEmpty: false,
                   operationName: TIM_t("更换皮肤"),
                   operationRightWidget: Text(
@@ -242,7 +243,7 @@ class _ProfileState extends State<MyProfile> {
                     ),
                   );
                 },
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                   isEmpty: false,
                   operationName: TIM_t("夜间模式"),
                   operationRightWidget: Text(
@@ -259,7 +260,7 @@ class _ProfileState extends State<MyProfile> {
                 onTap: () {
                   _showChunkSizeSheet(localSetting);
                 },
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                   isEmpty: false,
                   operationName: TIM_t("大文件分片大小"),
                   operationRightWidget: Text(
@@ -272,7 +273,7 @@ class _ProfileState extends State<MyProfile> {
               const SizedBox(
                 height: 10,
               ),
-              TIMUIKitOperationItem(
+              ThemeOperationItem(
                 isEmpty: false,
                 operationName: TIM_t("消息阅读状态"),
                 operationDescription:
@@ -289,7 +290,7 @@ class _ProfileState extends State<MyProfile> {
               const SizedBox(
                 height: 10,
               ),
-              TIMUIKitOperationItem(
+              ThemeOperationItem(
                 isEmpty: false,
                 operationName: TIM_t("显示在线状态"),
                 operationDescription: TIM_t("关闭后，您将不可以在会话列表和通讯录中看到好友在线或离线的状态提示。"),
@@ -311,7 +312,7 @@ class _ProfileState extends State<MyProfile> {
                     ),
                   );
                 },
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                   isEmpty: false,
                   operationName: TIM_t("关于腾讯云 · IM"),
                   operationRightWidget: const Text(""),
@@ -326,9 +327,11 @@ class _ProfileState extends State<MyProfile> {
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: theme.weakBackgroundColor,
                       border: Border(
-                          bottom: BorderSide(color: hexToColor("E5E5E5")))),
+                          bottom: BorderSide(
+                              color: theme.weakDividerColor ??
+                                  hexToColor("E5E5E5")))),
                   child: Text(
                     TIM_t("退出登录"),
                     style: TextStyle(color: hexToColor("FF584C"), fontSize: 17),

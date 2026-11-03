@@ -50,9 +50,9 @@ class LocationMessageItem extends StatelessWidget{
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.weakBackgroundColor,
         borderRadius: borderRadius,
-        border: Border.all(color: hexToColor("DDDDDD")),
+        border: Border.all(color: theme.weakDividerColor ?? Colors.transparent),
       ),
       constraints: const BoxConstraints(maxWidth: 240),
       child: Column(
@@ -68,7 +68,7 @@ class LocationMessageItem extends StatelessWidget{
                         ?.split(dividerForDesc)[0] ??
                         TIM_t("腾讯大厦"),
                     softWrap: true,
-                    style: const TextStyle(fontSize: 16),
+                    style: TextStyle(fontSize: 16, color: theme.darkTextColor),
                   ),
                   const SizedBox(
                     height: 2,
@@ -90,7 +90,7 @@ class LocationMessageItem extends StatelessWidget{
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: theme.weakDividerColor,
+                    color: theme.weakDividerColor ?? Colors.transparent,
                   ),
                 ),
                 Center(

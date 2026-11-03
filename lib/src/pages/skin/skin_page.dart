@@ -4,6 +4,7 @@ import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
+import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 
@@ -16,20 +17,94 @@ class SkinPage extends StatelessWidget {
           ))
       .toList();
 
+  /// 夜间模式三选一，桌面与移动布局共用。
+  Widget darkModeSection(BuildContext context, TUITheme theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            TIM_t("夜间模式"),
+            style: TextStyle(
+              fontSize: 15,
+              color: theme.darkTextColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: theme.weakDividerColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: DarkModeType.values
+                .map((mode) => Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Provider.of<DefaultThemeData>(context, listen: false)
+                              .darkMode = mode;
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Provider.of<DefaultThemeData>(context)
+                                        .darkMode ==
+                                    mode
+                                ? (theme.primaryColor ??
+                                    CommonColor.primaryColor)
+                                : Colors.transparent,
+                          ),
+                          child: Center(
+                            child: Text(
+                              mode.label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Provider.of<DefaultThemeData>(context)
+                                            .darkMode ==
+                                        mode
+                                    ? Colors.white
+                                    : theme.weakTextColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
 
     return TUIKitScreenUtils.getDeviceWidget(
         context: context,
-        desktopWidget: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: skinBuilder()
-              .map((e) => Container(
-            margin: const EdgeInsets.only(right: 30),
-            child: e,
-          ))
-              .toList(),
+        desktopWidget: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              darkModeSection(context, theme),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: skinBuilder()
+                    .map((e) => Container(
+                          margin: const EdgeInsets.only(right: 30),
+                          child: e,
+                        ))
+                    .toList(),
+              ),
+            ],
+          ),
         ),
         defaultWidget: Scaffold(
             appBar: AppBar(
@@ -60,68 +135,7 @@ class SkinPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Text(
-                          TIM_t("夜间模式"),
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: theme.darkTextColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: theme.weakDividerColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: DarkModeType.values
-                              .map((mode) => Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Provider.of<DefaultThemeData>(context,
-                                                listen: false)
-                                            .darkMode = mode;
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 10),
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          color: Provider.of<DefaultThemeData>(
-                                                          context)
-                                                      .darkMode ==
-                                                  mode
-                                              ? (theme.primaryColor ??
-                                                  CommonColor.primaryColor)
-                                              : Colors.transparent,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            mode.label,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Provider.of<DefaultThemeData>(
-                                                              context)
-                                                          .darkMode ==
-                                                      mode
-                                                  ? Colors.white
-                                                  : theme.weakTextColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ))
-                              .toList(),
-                        ),
-                      ),
+                      darkModeSection(context, theme),
                       const SizedBox(height: 20),
                       Padding(
                         padding: const EdgeInsets.symmetric(

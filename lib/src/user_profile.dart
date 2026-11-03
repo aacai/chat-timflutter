@@ -19,7 +19,9 @@ import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_message.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/profile_life_cycle.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/theme_profile_widgets.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
+import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/permission.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
@@ -142,7 +144,7 @@ class UserProfileState extends State<UserProfile> {
               child: Container(
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: theme.weakDividerColor))),
+                decoration: BoxDecoration(color: theme.weakBackgroundColor, border: Border(bottom: BorderSide(color: theme.weakDividerColor))),
                 child: Text(
                   e["label"] ?? "",
                   style: TextStyle(color: e["id"] != "deleteFriend" ? theme.primaryColor : theme.cautionColor, fontSize: 17),
@@ -150,6 +152,42 @@ class UserProfileState extends State<UserProfile> {
               ),
             );
     }).toList();
+  }
+
+  String _birthdayText(int? birthday) {
+    if (birthday == null || birthday == 0) {
+      return TIM_t("未填写");
+    }
+    final str = birthday.toString();
+    if (str.length == 8) {
+      return "${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}";
+    }
+    return str;
+  }
+
+  Widget _buildAddAndDeleteArea(
+      int friendType, V2TimConversation conversation, TUITheme theme) {
+    final isFriend = friendType != 0;
+    return InkWell(
+      onTap: () {
+        if (isFriend) {
+          _itemClick("deleteFriend", context, conversation);
+        } else {
+          _timuiKitProfileController.addFriend(widget.userID);
+        }
+      },
+      child: Container(
+        color: theme.weakBackgroundColor,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        child: Text(
+          isFriend ? TIM_t("删除好友") : TIM_t("加为好友"),
+          style: TextStyle(
+              color: isFriend ? theme.cautionColor : theme.primaryColor,
+              fontSize: 17),
+        ),
+      ),
+    );
   }
 
   _initTUICalling() async {
@@ -171,20 +209,22 @@ class UserProfileState extends State<UserProfile> {
           appBar: isWideScreen
               ? null
               : AppBar(
-                  shadowColor: Colors.white,
+                  shadowColor: theme.weakDividerColor,
                   title: Text(
                     TIM_t("详细资料"),
-                    style: TextStyle(color: hexToColor("1f2329"), fontSize: 16),
+                    style: TextStyle(
+                        color: theme.darkTextColor ?? hexToColor("1f2329"),
+                        fontSize: 16),
                   ),
-                  backgroundColor: hexToColor("f2f3f5"),
-                  iconTheme: const IconThemeData(
-                    color: Colors.white,
+                  backgroundColor: theme.weakBackgroundColor,
+                  iconTheme: IconThemeData(
+                    color: theme.darkTextColor,
                   ),
                   leading: IconButton(
                     padding: const EdgeInsets.only(left: 16),
                     icon: Icon(
                       Icons.arrow_back_ios,
-                      color: hexToColor("2a2e35"),
+                      color: theme.darkTextColor ?? hexToColor("2a2e35"),
                       size: 20,
                     ),
                     onPressed: () {
@@ -220,6 +260,67 @@ class UserProfileState extends State<UserProfile> {
                   }),
                   userID: widget.userID,
                   profileWidgetBuilder: ProfileWidgetBuilder(
+                      operationDivider: () => const ThemeProfileDivider(
+                          margin: EdgeInsets.symmetric(vertical: 10)),
+                      userInfoCard: (userInfo) =>
+                          ThemeUserInfoCard(userInfo: userInfo),
+                      remarkBar: (remark, handleTap) => InkWell(
+                            onTap: () => handleTap?.call(),
+                            child: ThemeOperationItem(
+                              operationName: TIM_t("备注"),
+                              operationRightWidget: Text(
+                                remark.isEmpty ? TIM_t("未填写") : remark,
+                                style: TextStyle(
+                                    color: theme.darkTextColor, fontSize: 15),
+                              ),
+                            ),
+                          ),
+                      genderBar: (gender) => ThemeOperationItem(
+                            operationName: TIM_t("性别"),
+                            showArrow: false,
+                            operationRightWidget: Text(
+                              gender == 1
+                                  ? TIM_t("男")
+                                  : (gender == 2
+                                      ? TIM_t("女")
+                                      : TIM_t("未填写")),
+                              style: TextStyle(
+                                  color: theme.darkTextColor, fontSize: 15),
+                            ),
+                          ),
+                      birthdayBar: (birthday) => ThemeOperationItem(
+                            operationName: TIM_t("生日"),
+                            showArrow: false,
+                            operationRightWidget: Text(
+                              _birthdayText(birthday),
+                              style: TextStyle(
+                                  color: theme.darkTextColor, fontSize: 15),
+                            ),
+                          ),
+                      addToBlockListBar: (isAsBlocked, onChange) =>
+                          ThemeOperationItem(
+                            operationName: TIM_t("加入黑名单"),
+                            type: "switch",
+                            operationValue: isAsBlocked,
+                            onSwitchChange: (v) => onChange?.call(v),
+                          ),
+                      pinConversationBar: (isPinned, onChange) =>
+                          ThemeOperationItem(
+                            operationName: TIM_t("置顶会话"),
+                            type: "switch",
+                            operationValue: isPinned,
+                            onSwitchChange: (v) => onChange?.call(v),
+                          ),
+                      messageMute: (isMute, onChange) => ThemeOperationItem(
+                            operationName: TIM_t("消息免打扰"),
+                            type: "switch",
+                            operationValue: isMute,
+                            onSwitchChange: (v) => onChange?.call(v),
+                          ),
+                      addAndDeleteArea: (friendInfo, conversation,
+                              friendType, isDisturb) =>
+                          _buildAddAndDeleteArea(
+                              friendType, conversation, theme),
                       searchBar: (conversation) => TIMUIKitProfileWidget.searchBar(context, conversation, false, handleTap: () {
                             Navigator.push(
                                 context,

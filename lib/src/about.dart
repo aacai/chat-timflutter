@@ -5,6 +5,7 @@ import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_demo/src/cancel_account.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/theme_profile_widgets.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:tencent_cloud_chat_demo/config.dart';
@@ -27,12 +28,13 @@ class AboutState extends State<About>{
   String sdkVersion = "null";
 
   Widget aboutItem(String text, Function onClick, [String? rightText]){
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return Container(
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color:
-            Color(int.parse('ededed', radix: 16)).withAlpha(255),
+            color: theme.weakDividerColor ??
+                Color(int.parse('ededed', radix: 16)).withAlpha(255),
             width: 1,
             style: BorderStyle.solid,
           ),
@@ -42,10 +44,10 @@ class AboutState extends State<About>{
         onTap: () {
           onClick();
         },
-        child: TIMUIKitOperationItem(
+        child: ThemeOperationItem(
           isEmpty: text.isEmpty,
           operationName: TIM_t(text),
-          showAllowEditStatus: !(rightText != null && rightText.isNotEmpty),
+          showArrow: !(rightText != null && rightText.isNotEmpty),
           operationRightWidget: Text(rightText ?? "", textAlign: TextAlign.end),
         ),
       ),
@@ -69,6 +71,7 @@ class AboutState extends State<About>{
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
     return Scaffold(
+      backgroundColor: theme.weakBackgroundColor,
       appBar: AppBar(
         iconTheme: const IconThemeData(
           color: Colors.white,

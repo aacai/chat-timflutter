@@ -158,7 +158,7 @@ class CancelAccount extends StatelessWidget {
                   elevation: 0,
                   highlightElevation: 0,
                   minWidth: double.infinity,
-                  color: Colors.white,
+                  color: theme.weakBackgroundColor,
                   textColor: hexToColor("FA5151"),
                   height: 46,
                   child: Text(

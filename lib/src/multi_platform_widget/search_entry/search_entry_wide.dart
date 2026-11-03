@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/add_friend.dart';
@@ -166,6 +168,7 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
   }
 
   showStartConversation(Offset? offset) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     if (entry != null) {
       return;
     }
@@ -179,7 +182,7 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
           },
           initOffset: offset ?? Offset(MediaQuery.of(context).size.height * 0.5, MediaQuery.of(context).size.height * 0.5),
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
                   color: Color(0xFFbebebe),
@@ -188,7 +191,7 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
                   spreadRadius: 1,
                 ),
               ],
-              color: Colors.white,
+              color: theme.weakBackgroundColor,
               borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
             margin: const EdgeInsets.only(top: 4),
@@ -203,10 +206,11 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return Container(
-      decoration: const BoxDecoration(boxShadow: [
+      decoration: BoxDecoration(boxShadow: [
         BoxShadow(
-          color: Colors.white,
+          color: theme.weakDividerColor ?? const Color(0xFFbebebe),
           offset: Offset(0.0, 2.0),
         )
       ]),

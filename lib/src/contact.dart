@@ -13,6 +13,11 @@ import 'package:tencent_cloud_chat_demo/src/group_list.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
+import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_info.dart'
+    if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_friend_info.dart';
+import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_friendship_view_model.dart';
+import 'package:tencent_cloud_chat_uikit/data_services/services_locatar.dart';
+import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/wide_popup.dart';
 import 'newContact.dart';
 
@@ -26,9 +31,101 @@ class Contact extends StatefulWidget {
 }
 
 class _ContactState extends State<Contact> {
+  final TUIFriendShipViewModel _friendshipModel =
+      serviceLocator<TUIFriendShipViewModel>();
+
   @override
   void initState() {
     super.initState();
+    _friendshipModel.loadContactListData();
+  }
+
+  Widget _buildContactList(List<TopListItem> topList, bool isWideScreen) {
+    return ChangeNotifierProvider.value(
+      value: _friendshipModel,
+      child: Consumer<TUIFriendShipViewModel>(
+        builder: (context, model, _) {
+          final friends = model.friendList ?? <V2TimFriendInfo>[];
+          final theme = Provider.of<DefaultThemeData>(context).theme;
+          if (friends.isEmpty) {
+            return ListView(
+              children: [
+                ...topList.map((e) => _topListBuilder(e) ?? const SizedBox()),
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Center(
+                    child: Text(
+                      TIM_t("无联系人"),
+                      style: TextStyle(color: theme.weakTextColor),
+                    ),
+                  ),
+                )
+              ],
+            );
+          }
+          return ListView.builder(
+            itemCount: topList.length + friends.length,
+            itemBuilder: (context, index) {
+              if (index < topList.length) {
+                return _topListBuilder(topList[index]) ??
+                    const SizedBox.shrink();
+              }
+              return _buildFriendItem(friends[index - topList.length],
+                  isWideScreen, theme);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFriendItem(
+      V2TimFriendInfo item, bool isWideScreen, TUITheme theme) {
+    final nickName = item.userProfile?.nickName ?? "";
+    final friendRemark = item.friendRemark ?? "";
+    final showName = friendRemark.isNotEmpty
+        ? friendRemark
+        : (nickName.isNotEmpty ? nickName : item.userID);
+    return InkWell(
+      onTap: () {
+        if (widget.onTapItem != null) {
+          widget.onTapItem!(item.userID);
+        } else {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserProfile(userID: item.userID),
+              ));
+        }
+      },
+      child: Container(
+        color: theme.weakBackgroundColor,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            SizedBox(
+              height: isWideScreen ? 30 : 40,
+              width: isWideScreen ? 30 : 40,
+              child: Avatar(
+                faceUrl: item.userProfile?.faceUrl ?? "",
+                showName: showName,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                showName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: theme.darkTextColor,
+                    fontSize: isWideScreen ? 14 : 16),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   _topListItemTap(String id) {
@@ -108,6 +205,7 @@ class _ContactState extends State<Contact> {
   Widget? _topListBuilder(TopListItem item) {
     final isWideScreen =
         TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     final showName = item.name;
     if (item.id == "newContact") {
       return InkWell(
@@ -116,7 +214,9 @@ class _ContactState extends State<Contact> {
         },
         child: Container(
           decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: hexToColor("DBDBDB")))),
+              border: Border(
+                  bottom: BorderSide(
+                      color: theme.weakDividerColor ?? hexToColor("DBDBDB")))),
           padding: const EdgeInsets.only(top: 12, left: 16, bottom: 12),
           child: Row(
             children: [
@@ -137,7 +237,7 @@ class _ContactState extends State<Contact> {
                   Text(
                     showName,
                     style: TextStyle(
-                        color: hexToColor("111111"),
+                        color: theme.darkTextColor ?? hexToColor("111111"),
                         fontSize: isWideScreen ? 14 : 18),
                   ),
                   Expanded(child: Container()),
@@ -146,7 +246,7 @@ class _ContactState extends State<Contact> {
                     margin: const EdgeInsets.only(right: 16),
                     child: Icon(
                       Icons.keyboard_arrow_right,
-                      color: hexToColor('BBBBBB'),
+                      color: theme.weakTextColor ?? hexToColor('BBBBBB'),
                     ),
                   )
                 ],
@@ -161,55 +261,36 @@ class _ContactState extends State<Contact> {
 
   @override
   Widget build(BuildContext context) {
-    final LocalSetting localSetting = Provider.of<LocalSetting>(context);
     final isWideScreen =
         TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
+    final topList = [
+      TopListItem(
+          name: TIM_t("新的联系人"),
+          id: "newContact",
+          icon: Image.asset(_getImagePathByID("newContact")),
+          onTap: () {
+            _topListItemTap("newContact");
+          }),
+      if (!isWideScreen)
+        TopListItem(
+            name: TIM_t("我的群聊"),
+            id: "groupList",
+            icon: Image.asset(_getImagePathByID("groupList")),
+            onTap: () {
+              _topListItemTap("groupList");
+            }),
+      TopListItem(
+          name: TIM_t("黑名单"),
+          id: "blackList",
+          icon: Image.asset(_getImagePathByID("blackList")),
+          onTap: () {
+            _topListItemTap("blackList");
+          }),
+    ];
 
     return Column(
       children: [
-        Expanded(
-            child: TIMUIKitContact(
-          isShowOnlineStatus: localSetting.isShowOnlineStatus,
-          topList: [
-            TopListItem(
-                name: TIM_t("新的联系人"),
-                id: "newContact",
-                icon: Image.asset(_getImagePathByID("newContact")),
-                onTap: () {
-                  _topListItemTap("newContact");
-                }),
-            if (!isWideScreen)
-              TopListItem(
-                  name: TIM_t("我的群聊"),
-                  id: "groupList",
-                  icon: Image.asset(_getImagePathByID("groupList")),
-                  onTap: () {
-                    _topListItemTap("groupList");
-                  }),
-            TopListItem(
-                name: TIM_t("黑名单"),
-                id: "blackList",
-                icon: Image.asset(_getImagePathByID("blackList")),
-                onTap: () {
-                  _topListItemTap("blackList");
-                }),
-          ],
-          topListItemBuilder: _topListBuilder,
-          onTapItem: (item) {
-            if (widget.onTapItem != null) {
-              widget.onTapItem!(item.userID);
-            } else {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserProfile(userID: item.userID),
-                  ));
-            }
-          },
-          emptyBuilder: (context) => Center(
-            child: Text(TIM_t("无联系人")),
-          ),
-        ))
+        Expanded(child: _buildContactList(topList, isWideScreen))
       ],
     );
   }

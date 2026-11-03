@@ -37,6 +37,7 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
         TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
 
     return Scaffold(
+      backgroundColor: theme.weakBackgroundColor,
       appBar: isWideScreen
           ? null
           : AppBar(

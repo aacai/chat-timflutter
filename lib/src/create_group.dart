@@ -20,6 +20,7 @@ import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 
 import 'package:tencent_cloud_chat_demo/src/chat.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/theme_profile_widgets.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/message/message_services.dart';
@@ -200,6 +201,19 @@ class _CreateGroup extends State<CreateGroup> {
     _getConversationList();
   }
 
+  void _toggleSelect(V2TimFriendInfo item) {
+    final exists = selectedFriendList.any((e) => e.userID == item.userID);
+    if (exists) {
+      selectedFriendList.removeWhere((e) => e.userID == item.userID);
+    } else {
+      if (widget.convType == GroupTypeForUIKit.single) {
+        selectedFriendList.clear();
+      }
+      selectedFriendList.add(item);
+    }
+    setState(() {});
+  }
+
   void onSubmit() {
     if (selectedFriendList.isNotEmpty) {
       switch (widget.convType) {
@@ -231,15 +245,27 @@ class _CreateGroup extends State<CreateGroup> {
         TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
 
     Widget chooseMembers() {
-      return ContactList(
-        bgColor: isWideScreen ? theme.wideBackgroundColor : null,
-        contactList: friendList,
-        isCanSelectMemberItem: true,
-        maxSelectNum: widget.convType == GroupTypeForUIKit.single ? 1 : null,
-        onSelectedMemberItemChange: (selectedMember) {
-          selectedFriendList = selectedMember;
-          setState(() {});
-        },
+      return Container(
+        color: theme.weakBackgroundColor,
+        child: ListView.builder(
+          itemCount: friendList.length,
+          itemBuilder: (context, index) {
+            final item = friendList[index];
+            final showName = _getShowName(item);
+            final selected =
+                selectedFriendList.any((e) => e.userID == item.userID);
+            return ThemeListItem(
+              showName: showName,
+              faceUrl: item.userProfile?.faceUrl,
+              onTap: () => _toggleSelect(item),
+              trailing: Checkbox(
+                value: selected,
+                activeColor: theme.primaryColor,
+                onChanged: (_) => _toggleSelect(item),
+              ),
+            );
+          },
+        ),
       );
     }
 

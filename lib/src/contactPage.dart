@@ -68,7 +68,7 @@ class _ContactPageState extends State<ContactPage> {
       body: Container(
         width: MediaQuery.of(context).size.width,
         decoration: BoxDecoration(
-          color: hexToColor("ecf3fe"),
+          color: theme.weakBackgroundColor,
         ),
         child: Stack(
           alignment: Alignment.center,

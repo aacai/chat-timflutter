@@ -16,10 +16,10 @@ import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/time_ago.dart';
-import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitProfile/widget/tim_uikit_profile_widget.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/avatar.dart';
 import 'package:tencent_cloud_chat_demo/config.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/theme_profile_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/wide_popup.dart';
 
@@ -143,6 +143,18 @@ class MyProfileDetailState extends State<MyProfileDetail> {
     }
   }
 
+  String _birthdayText() {
+    final birthday = userProfile?.birthday;
+    if (birthday == null || birthday == 0) {
+      return TIM_t("未填写");
+    }
+    final str = birthday.toString();
+    if (str.length == 8) {
+      return "${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}";
+    }
+    return str;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
@@ -176,12 +188,12 @@ class MyProfileDetailState extends State<MyProfileDetail> {
         child: Column(
           children: [
             if (isWideScreen)
-              TIMUIKitProfileUserInfoCard(
+              ThemeUserInfoCard(
                   onClickAvatar: () => showSelectAvatarPage(context),
                   userInfo: userProfile),
             if (!isWideScreen)
               GestureDetector(
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                   isEmpty: false,
                   operationName: TIM_t("头像"),
                   operationRightWidget: SizedBox(
@@ -194,11 +206,8 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                 ),
                 onTap: () => showSelectAvatarPage(context),
               ),
-            TIMUIKitProfileWidget.operationDivider(
-                color: theme.weakDividerColor,
-                height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 20)
-            ),
+            const ThemeProfileDivider(
+                margin: EdgeInsets.symmetric(vertical: 20)),
             InkWell(
               onTapDown: (details) async {
                 widget.controller?.showTextInputBottomSheet(
@@ -221,7 +230,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                     },
                     theme: theme);
               },
-              child: TIMUIKitOperationItem(
+              child: ThemeOperationItem(
                 isEmpty: !TencentUtils.isTextNotEmpty(userProfile?.nickName),
                 operationName: TIM_t("昵称"),
                 operationRightWidget: Text(
@@ -233,14 +242,17 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                     textAlign: isWideScreen ? null : TextAlign.end),
               ),
             ),
-            TIMUIKitProfileWidget.userAccountBar(
-              userProfile?.userID ?? "",
-              false,
+            ThemeOperationItem(
+              operationName: TIM_t("账号"),
+              showArrow: false,
+              operationRightWidget: SelectableText(
+                userProfile?.userID ?? "",
+                textAlign: isWideScreen ? null : TextAlign.end,
+                style: TextStyle(color: theme.darkTextColor, fontSize: 15),
+              ),
             ),
-            TIMUIKitProfileWidget.operationDivider(
-                color: theme.weakDividerColor,
-                height: 1,
-                margin: const EdgeInsets.symmetric(vertical: 20)),
+            const ThemeProfileDivider(
+                margin: EdgeInsets.symmetric(vertical: 20)),
             InkWell(
                 onTapDown: (details) async {
                   widget.controller?.showTextInputBottomSheet(
@@ -263,7 +275,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                       },
                       theme: theme);
                 },
-                child: TIMUIKitOperationItem(
+                child: ThemeOperationItem(
                     isEmpty: !TencentUtils.isTextNotEmpty(
                         userProfile?.selfSignature),
                     operationName: TIM_t("个性签名"),
@@ -318,14 +330,27 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                     showGenderChoseSheet(context, theme);
                   }
                 },
-                child: TIMUIKitProfileWidget.genderBarWithArrow(
-                    userProfile?.gender ?? 0, false)),
+                child: ThemeOperationItem(
+                    operationName: TIM_t("性别"),
+                    operationRightWidget: Text(
+                        (userProfile?.gender == 1
+                            ? TIM_t("男")
+                            : (userProfile?.gender == 2
+                                ? TIM_t("女")
+                                : TIM_t("未填写"))),
+                        textAlign: isWideScreen ? null : TextAlign.end,
+                        style: TextStyle(
+                            color: theme.darkTextColor, fontSize: 15)))),
             InkWell(
                 onTapDown: (details) {
                   _selectDate(context);
                 },
-                child: TIMUIKitProfileWidget.birthdayBar(
-                    userProfile?.birthday ?? 0, false)),
+                child: ThemeOperationItem(
+                    operationName: TIM_t("生日"),
+                    operationRightWidget: Text(_birthdayText(),
+                        textAlign: isWideScreen ? null : TextAlign.end,
+                        style: TextStyle(
+                            color: theme.darkTextColor, fontSize: 15)))),
 
             if (isWideScreen) Expanded(child: Container()),
             if (isWideScreen)

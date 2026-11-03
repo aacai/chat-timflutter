@@ -77,8 +77,8 @@ class _SearchEntryNarrowState extends State<SearchEntryNarrow> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: theme.weakBackgroundColor,
               borderRadius: BorderRadius.all(Radius.circular(4)),
             ),
             height: 40,
