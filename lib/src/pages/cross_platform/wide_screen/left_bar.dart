@@ -1,5 +1,6 @@
 import 'package:bitsdojo_window/bitsdojo_window.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/home_page.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -144,13 +145,24 @@ class _LeftBarState extends State<LeftBar> {
   }
 
   List<Widget> bottomNavigatorList(theme) {
+    final primary = theme.primaryColor ?? CommonColor.primaryColor;
     return getBottomNavigatorList(theme).map((e) {
+      final isSelected = widget.index == e.index;
+      Widget icon = isSelected ? e.selectedIcon : e.unselectedIcon;
+      if (isSelected) {
+        // 选中态是主色胶囊，图标统一染成白色，避免图标颜色和底色打架。
+        icon = ColorFiltered(
+          colorFilter: const ColorFilter.mode(AppColors.onPrimary, BlendMode.srcATop),
+          child: icon,
+        );
+      }
       return Container(
-        width: 60,
-        height: 60,
+        width: 56,
+        height: 48,
+        margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 8),
         decoration: BoxDecoration(
-          color: widget.index == e.index ? hexToColor("273044") : null,
-          borderRadius: BorderRadius.circular(8.0),
+          color: isSelected ? primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: GestureDetector(
           onTap: () {
@@ -162,17 +174,13 @@ class _LeftBarState extends State<LeftBar> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(
-                  child: widget.index == e.index
-                      ? e.selectedIcon
-                      : e.unselectedIcon,
-                ),
-                const SizedBox(height: 4),
+                icon,
+                const SizedBox(height: 3),
                 Text(
                   e.title,
                   style: TextStyle(
-                    color: hexToColor("d9dbe2"),
-                    fontSize: 10,
+                    color: isSelected ? AppColors.onPrimary : const Color(0xFF9AA3B2),
+                    fontSize: 11,
                   ),
                 )
               ],

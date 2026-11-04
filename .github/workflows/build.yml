@@ -400,9 +400,60 @@ jobs:
           path: chat-timflutter-macos-arm64.dmg
           if-no-files-found: error
 
+  linux:
+    name: linux x64 (tauri deb / appimage)
+    needs: quality
+    # 22.04 的 libfuse2 是 AppImage 打包工具的依赖；24.04 换成了 libfuse2t64，
+    # Tauri 下载的 linuxdeploy 在 24.04 上会报缺 libfuse.so.2。
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: 装 Tauri 系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libssl-dev libfuse2 \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - uses: ./.github/actions/im-credentials
+      - run: flutter pub get
+      - uses: ./.github/actions/patch-uikit-linux
+      # Tauri 自定义协议按根路径取资源，base-href 必须是 /；
+      # Flutter 3.41 起还要由 flutter_bootstrap.js 引导，手写注入 main.dart.js 会白屏。
+      - run: flutter build web --release --base-href /
+      - name: 校验 Web 产物
+        run: |
+          grep -q '<base href="/" />' build/web/index.html
+          grep -q 'flutter_bootstrap.js' build/web/index.html
+          test -f build/web/flutter_bootstrap.js
+          test -f build/web/main.dart.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # 预编译 CLI，避免 cargo install tauri-cli 在 runner 上重编译整个 Rust 依赖树。
+      - name: 装 Tauri CLI
+        run: npm install --no-save --no-audit --no-fund '@tauri-apps/cli@^2'
+      - name: 打 deb / AppImage
+        run: ./node_modules/.bin/tauri build --bundles deb,appimage
+      - name: 列出产物
+        run: ls -lh src-tauri/target/release/bundle/deb/ src-tauri/target/release/bundle/appimage/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chat-timflutter-linux-x64
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
   release:
     name: 发 Release
-    needs: [android, windows, macos]
+    needs: [android, windows, macos, linux]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
@@ -420,6 +471,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: chat-timflutter-macos-arm64
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: chat-timflutter-linux-x64
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:

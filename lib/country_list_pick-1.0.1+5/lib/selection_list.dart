@@ -6,6 +6,7 @@ import 'country_selection_theme.dart';
 import 'support/code_country.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:flutter/services.dart';
 
 
@@ -75,10 +76,10 @@ class _SelectionListState extends State<SelectionList> {
   @override
   Widget build(BuildContext context) {
     if (widget.useUiOverlay)
-      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
+      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+        statusBarColor: AppColors.surfaceOf(context),
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
+        systemNavigationBarColor: AppColors.surfaceOf(context),
         systemNavigationBarIconBrightness: Brightness.dark,
         statusBarBrightness: !kIsWeb ? Brightness.dark : Brightness.light,
       ));
@@ -86,7 +87,7 @@ class _SelectionListState extends State<SelectionList> {
     Widget scaffold = Scaffold(
       appBar: widget.appBar,
       body: Container(
-        color: const Color(0xfff4f4f4),
+        color: AppColors.surfaceOf(context),
         child: LayoutBuilder(builder: (context, contrainsts) {
           diff = height - contrainsts.biggest.height;
           _heightscroller = (contrainsts.biggest.height) / _alphabet.length;
@@ -111,7 +112,7 @@ class _SelectionListState extends State<SelectionList> {
                           ),
                         ),
                         Container(
-                          color: Colors.white,
+                          color: AppColors.surfaceOf(context),
                           child: TextField(
                             controller: _controller,
                             decoration: InputDecoration(
@@ -138,7 +139,7 @@ class _SelectionListState extends State<SelectionList> {
                           ),
                         ),
                         Container(
-                          color: Colors.white,
+                          color: AppColors.surfaceOf(context),
                           child: Material(
                             color: Colors.transparent,
                             child: ListTile(
@@ -163,7 +164,7 @@ class _SelectionListState extends State<SelectionList> {
                       return widget.countryBuilder != null
                           ? widget.countryBuilder!(
                               context, countries.elementAt(index))
-                          : getListCountry(countries.elementAt(index));
+                          : getListCountry(context, countries.elementAt(index));
                     }, childCount: countries.length),
                   )
                 ],
@@ -193,10 +194,10 @@ class _SelectionListState extends State<SelectionList> {
     return widget.useSafeArea ? SafeArea(child: scaffold) : scaffold;
   }
 
-  Widget getListCountry(CountryCode e) {
+  Widget getListCountry(BuildContext context, CountryCode e) {
     return Container(
       height: 50,
-      color: Colors.white,
+      color: AppColors.surfaceOf(context),
       child: Material(
         color: Colors.transparent,
         child: ListTile(
@@ -251,7 +252,7 @@ class _SelectionListState extends State<SelectionList> {
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color:
-                        widget.theme?.alphabetSelectedTextColor ?? Colors.white)
+                        widget.theme?.alphabetSelectedTextColor ?? AppColors.onPrimary)
                 : TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,

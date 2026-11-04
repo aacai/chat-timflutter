@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
@@ -87,7 +88,7 @@ class CancelAccount extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         shadowColor: theme.weakDividerColor,
         elevation: 1,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
@@ -279,7 +280,7 @@ class _CreateGroup extends State<CreateGroup> {
           appBar: AppBar(
               title: Text(
                 TIM_t("选择联系人"),
-                style: const TextStyle(color: Colors.white, fontSize: 17),
+                style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
               ),
               shadowColor: theme.weakDividerColor,
               flexibleSpace: Container(
@@ -296,14 +297,14 @@ class _CreateGroup extends State<CreateGroup> {
                   child: Text(
                     TIM_t("确定"),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.onPrimary,
                       fontSize: 16,
                     ),
                   ),
                 )
               ],
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               )),
           body: chooseMembers(),
         ));

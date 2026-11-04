@@ -35,6 +35,7 @@ class _UserAvatarState extends State<UserAvatar> {
           onTapDown: (details){
             TUIKitWidePopup.showPopupWindow(
                 isDarkBackground: false,
+                theme: theme,
                 operationKey: TUIKitWideModalOperationKey.secondaryClickUserAvatar,
                 borderRadius: const BorderRadius.all(
                     Radius.circular(4)

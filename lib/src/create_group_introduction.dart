@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/enum/group_type.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
@@ -170,7 +171,7 @@ class _CreateGroupIntroductionState extends State<CreateGroupIntroduction> {
                 TIM_t("创建群聊"),
                 style: TextStyle(color: hexToColor("1f2329"), fontSize: 16),
               ),
-              shadowColor: Colors.white,
+              shadowColor: Colors.transparent,
               backgroundColor: hexToColor("f2f3f5"),
               leading: IconButton(
                 padding: const EdgeInsets.only(left: 16),

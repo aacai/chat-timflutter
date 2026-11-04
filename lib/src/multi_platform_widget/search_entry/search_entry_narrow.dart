@@ -87,12 +87,18 @@ class _SearchEntryNarrowState extends State<SearchEntryNarrow> {
               children: [
                 Icon(
                   Icons.search,
-                  color: hexToColor("979797"),
+                  color: Provider.of<DefaultThemeData>(context)
+                          .theme
+                          .weakTextColor ??
+                      hexToColor("979797"),
                   size: 18,
                 ),
                 Text(TIM_t("搜索"),
                     style: TextStyle(
-                      color: hexToColor("979797"),
+                      color: Provider.of<DefaultThemeData>(context)
+                              .theme
+                              .weakTextColor ??
+                          hexToColor("979797"),
                       fontSize: 14,
                     )),
               ],

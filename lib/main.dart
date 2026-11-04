@@ -20,6 +20,9 @@ import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/user_guide_provider.dart';
+import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
@@ -31,11 +34,10 @@ void main(List<String> args) {
     return;
   }
   WidgetsFlutterBinding.ensureInitialized();
-  // 设置状态栏样式
-  SystemUiOverlayStyle style = SystemUiOverlayStyle(
-    statusBarColor: hexToColor('ededed'),
-  );
-  SystemChrome.setSystemUIOverlayStyle(style);
+  // 首帧之前状态栏不能是浅色，否则深色模式下启动瞬间会亮一下。
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+  ));
   // 全局loading
   configLoading();
   // AutoSizeUtil.setStandard(375, isAutoTextSize: true);
@@ -50,30 +52,35 @@ void main(List<String> args) {
     SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
   }
 
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((_) {
-    runApp(
-      // runAutoApp(
-      TranslationProvider(
-        child: MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => LoginUserInfo()),
-            ChangeNotifierProvider(create: (_) => DefaultThemeData()),
-            ChangeNotifierProvider(create: (_) => CustomStickerPackageData()),
-            ChangeNotifierProvider(
-              create: (_) => LocalSetting(),
-            ),
-            ChangeNotifierProvider(create: (_) => UserGuideProvider()),
-          ],
-          child: const TUIKitDemoApp(),
-        ),
+  // 方向锁是异步平台调用，不能用它的 Future 包住 runApp：
+  // 桌面端该调用可能迟迟不返回，Flutter 首帧一直不出，窗口就停在原生白底上。
+  if (!PlatformUtils().isDesktop) {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
+
+  runApp(
+    TranslationProvider(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => LoginUserInfo()),
+          ChangeNotifierProvider(create: (_) => DefaultThemeData()),
+          ChangeNotifierProvider(create: (_) => CustomStickerPackageData()),
+          ChangeNotifierProvider(
+            create: (_) => LocalSetting(),
+          ),
+          ChangeNotifierProvider(create: (_) => UserGuideProvider()),
+        ],
+        child: const TUIKitDemoApp(),
       ),
-    );
-  });
+    ),
+  );
 
   if (PlatformUtils().isDesktop) {
     doWhenWindowReady(() {
       const initialSize = Size(1300, 830);
-      appWindow.minSize = const Size(1100, 630);
+      // 允许缩到小屏宽度，窗口变窄时 ResponsiveHome 会自动切移动布局；
+      // 原来的 1100 下限会把宽屏布局锁死，无法验证小屏适配。
+      appWindow.minSize = const Size(360, 560);
       appWindow.size = initialSize;
       appWindow.alignment = Alignment.center;
       appWindow.show();
@@ -102,6 +109,8 @@ class TUIKitDemoApp extends StatelessWidget {
       child: MaterialApp(
         title: '可达',
         debugShowCheckedModeBanner: false,
+        // 首帧渲染前引擎用来填充窗口的底色，跟随明暗主题，避免启动闪白。
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
         locale: TranslationProvider.of(context).flutterLocale, // use provider
         supportedLocales: LocaleSettings.supportedLocales,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -110,6 +119,15 @@ class TUIKitDemoApp extends StatelessWidget {
           platform: TargetPlatform.iOS,
           brightness: Brightness.light,
           scaffoldBackgroundColor: light.weakBackgroundColor,
+          canvasColor: light.weakBackgroundColor,
+          colorScheme: ColorScheme.light(
+            surface: AppColors.lightSurface,
+            primary: light.primaryColor ?? AppColors.onPrimary,
+          ),
+          dialogTheme: const DialogThemeData(
+            backgroundColor: AppColors.lightSurface,
+            surfaceTintColor: Colors.transparent,
+          ),
           pageTransitionsTheme: PageTransitionsTheme(builders: {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -123,6 +141,19 @@ class TUIKitDemoApp extends StatelessWidget {
           platform: TargetPlatform.iOS,
           brightness: Brightness.dark,
           scaffoldBackgroundColor: dark.weakBackgroundColor,
+          canvasColor: dark.weakBackgroundColor,
+          colorScheme: ColorScheme.dark(
+            surface: AppColors.darkSurface,
+            primary: dark.primaryColor ?? AppColors.onPrimary,
+          ),
+          dialogTheme: const DialogThemeData(
+            backgroundColor: AppColors.darkSurface,
+            surfaceTintColor: Colors.transparent,
+          ),
+          // CupertinoAlertDialog（登录页隐私协议）也要跟随夜间模式
+          cupertinoOverrideTheme: const CupertinoThemeData(
+            brightness: Brightness.dark,
+          ),
           pageTransitionsTheme: PageTransitionsTheme(builders: {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -133,7 +164,10 @@ class TUIKitDemoApp extends StatelessWidget {
           )),
         ),
         home: const TencentChatApp(),
-        builder: EasyLoading.init(),
+        navigatorKey: InitStep.navigatorKey,
+        builder: (context, child) => AppEscapeScope(
+          child: EasyLoading.init()(context, child) ?? const SizedBox.shrink(),
+        ),
         navigatorObservers: !PlatformUtils().isMobile ? [] : [TUICallKit.navigatorObserver],
       ),
     );

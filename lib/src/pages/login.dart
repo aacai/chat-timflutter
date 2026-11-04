@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,7 +36,9 @@ class LoginPage extends StatelessWidget {
         },
         child: Scaffold(
           body: AppLayout(initIMSDK: initIMSDK),
-          resizeToAvoidBottomInset: false,
+          // 移动端弹键盘时要上推布局，否则输入框被遮挡；
+          // 桌面端没有软键盘，这个属性无副作用。
+          resizeToAvoidBottomInset: true,
         ));
   }
 }
@@ -46,86 +49,141 @@ class AppLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<DefaultThemeData>(context).theme;
-    return GestureDetector(
-      onTap: () {
-        SystemChannels.textInput.invokeMethod('TextInput.hide');
-      },
-      child: Container(
-        color: theme.weakBackgroundColor,
-        child: Column(
-          children: [
-            const AppLogo(),
-            Expanded(
-              child: LoginForm(
-                initIMSDK: initIMSDK,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 宽屏（桌面/平板）左右分栏，窄屏（手机）上下结构。
+        final isWide = constraints.maxWidth >= 900;
+        if (isWide) {
+          return Row(
+            children: [
+              const Expanded(flex: 5, child: AppLogo()),
+              Expanded(
+                flex: 4,
+                child: LoginForm(initIMSDK: initIMSDK),
               ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            const AppLogo(compact: true),
+            Expanded(
+              child: LoginForm(initIMSDK: initIMSDK),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class AppLogo extends StatelessWidget {
-  const AppLogo({Key? key}) : super(key: key);
+  /// true：窄屏顶部品牌头；false：宽屏左侧整栏品牌区。
+  final bool compact;
+  const AppLogo({Key? key, this.compact = false}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 48,
-        bottom: 40,
-        left: 24,
-        right: 24,
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = theme.primaryColor ?? CommonColor.primaryColor;
+    final titleColor = isDark ? AppColors.onSurfaceOf(context) : theme.darkTextColor;
+    final subtitleColor = isDark ? AppColors.weakTextOf(context) : theme.weakTextColor;
+
+    // 原来是一张白色大图压在饱和渐变上，又白又大很扎眼。
+    // 改成主色圆角容器里的小图标，靠留白和排版撑起品牌区。
+    final mark = Container(
+      width: compact ? 40 : 64,
+      height: compact ? 40 : 64,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            theme.lightPrimaryColor ?? CommonColor.lightPrimaryColor,
-            theme.primaryColor ?? CommonColor.primaryColor
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 64,
-            width: 64,
-            child: Image.asset(
-              "assets/logo_transparent.png",
-              color: Colors.white,
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            TIM_t("腾讯云即时通信IM"),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            TIM_t("欢迎使用本 APP 体验腾讯云 IM 产品服务"),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+        color: primary,
+        borderRadius: BorderRadius.circular(compact ? 12 : 18),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withOpacity(0.25),
+            blurRadius: compact ? 10 : 18,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      padding: EdgeInsets.all(compact ? 9 : 14),
+      child: Image.asset(
+        "assets/logo_transparent.png",
+        fit: BoxFit.contain,
+      ),
+    );
+
+    final title = Text(
+      "可达",
+      style: TextStyle(
+        color: titleColor,
+        fontSize: compact ? 20 : 32,
+        fontWeight: FontWeight.w700,
+        letterSpacing: compact ? 0.5 : 1,
+      ),
+    );
+
+    final subtitle = Text(
+      TIM_t("安全、高效、值得信赖的即时通讯"),
+      style: TextStyle(color: subtitleColor, fontSize: compact ? 12 : 14),
+    );
+
+    if (compact) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 28,
+          bottom: 24,
+          left: 28,
+          right: 28,
+        ),
+        color: isDark ? AppColors.onPrimary.withOpacity(0.03) : primary.withOpacity(0.04),
+        child: Row(
+          children: [
+            mark,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  title,
+                  const SizedBox(height: 2),
+                  subtitle,
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primary.withOpacity(isDark ? 0.24 : 0.10),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(48),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              mark,
+              const SizedBox(height: 28),
+              title,
+              const SizedBox(height: 10),
+              subtitle,
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -177,13 +235,18 @@ class _LoginFormState extends State<LoginForm> {
     if (firstTime != null && firstTime == "true") {
       return;
     }
+    // 读取 SharedPreferences 是异步的，这期间页面可能已经被卸载，
+    // 此时再弹窗等于往已 dispose 的 Navigator 里塞路由。
+    if (!mounted) {
+      return;
+    }
     showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return CupertinoAlertDialog(
           content: Text.rich(
-            TextSpan(style: const TextStyle(fontSize: 14, color: Colors.black, height: 2.0), children: [
+            TextSpan(style: const TextStyle(fontSize: 14, color: Color(0xFF1F2329), height: 2.0), children: [
               TextSpan(
                 text: TIM_t("欢迎使用腾讯云即时通信 IM，为保护您的个人信息安全，我们更新了《隐私政策》，主要完善了收集用户信息的具体内容和目的、增加了第三方SDK使用等方面的内容。"),
               ),
@@ -301,7 +364,13 @@ class _LoginFormState extends State<LoginForm> {
 
       String userSig = generateTestUserSig.genSig(identifier: userID, expire: 99999);
 
-      await TUICallKit.instance.login(sdkAppId, userID, userSig);
+      // 音视频通话 TUICallKit 在桌面端（macOS/Windows）支持有限，login 可能抛错，
+      // 这里隔离它，失败不能阻塞 IM 登录本身，否则整个登录都会失败。
+      try {
+        await TUICallKit.instance.login(sdkAppId, userID, userSig);
+      } catch (callKitError) {
+        debugPrint("TUICallKit login skipped: $callKitError");
+      }
 
       var data = await coreInstance.login(
         userID: userID,
@@ -310,6 +379,9 @@ class _LoginFormState extends State<LoginForm> {
       if (data.code != 0) {
         final option1 = data.desc;
         final msg = TIM_t_para("登录失败{{option1}}", "登录失败$option1")(option1: option1);
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _loginError = msg;
         });
@@ -326,12 +398,15 @@ class _LoginFormState extends State<LoginForm> {
       await EncryptionService.instance.init();
 
       directToHomePage();
-    } catch (e) {
+    } catch (e, s) {
       // 登录过程抛异常（网络/SDK 等）时静默失败无提示，这里显式暴露原因。
+      debugPrint("login failed: $e\n$s");
       final msg = "登录失败：$e";
-      setState(() {
-        _loginError = msg;
-      });
+      if (mounted) {
+        setState(() {
+          _loginError = msg;
+        });
+      }
       ToastUtils.toast(msg);
     } finally {
       _isLoggingIn = false;
@@ -342,142 +417,180 @@ class _LoginFormState extends State<LoginForm> {
   Widget build(BuildContext context) {
     final theme = Provider.of<DefaultThemeData>(context).theme;
     final primary = theme.primaryColor ?? CommonColor.primaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = AppColors.surfaceOf(context);
+    final isWide = MediaQuery.of(context).size.width >= 900;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: theme.weakBackgroundColor,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+    final fieldBorderColor = AppColors.dividerOf(context);
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: isWide ? 48 : 24,
+          vertical: 24,
+        ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.35 : 0.06),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Form(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                TIM_t("用户名"),
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: theme.darkTextColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _userIdController,
-                autofocus: false,
-                style: TextStyle(
-                  color: theme.darkTextColor,
-                  fontSize: 16,
-                ),
-                decoration: InputDecoration(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  hintText: TIM_t("请输入用户名"),
-                  hintStyle:
-                      TextStyle(fontSize: 15, color: theme.weakTextColor),
-                  filled: true,
-                  fillColor: theme.weakBackgroundColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                        color: theme.weakDividerColor ?? Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        BorderSide(color: primary, width: 1.5),
-                  ),
-                ),
-                keyboardType: TextInputType.text,
-                onChanged: (v) {
-                  setState(() {
-                    userID = v;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
+            child: Form(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: Checkbox(
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      value: _autoLogin,
-                      activeColor: primary,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _autoLogin = value ?? false;
-                        });
-                      },
+                  Text(
+                    TIM_t("欢迎回来"),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: theme.darkTextColor,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    TIM_t("自动登录"),
+                    TIM_t("登录以继续使用"),
                     style: TextStyle(
                       fontSize: 14,
                       color: theme.weakTextColor,
                     ),
                   ),
+                  const SizedBox(height: 28),
+                  Text(
+                    TIM_t("用户名"),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: theme.darkTextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _userIdController,
+                    autofocus: false,
+                    style: TextStyle(
+                      color: theme.darkTextColor,
+                      fontSize: 16,
+                    ),
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      hintText: TIM_t("请输入用户名"),
+                      hintStyle: TextStyle(fontSize: 15, color: theme.weakTextColor),
+                      filled: true,
+                      fillColor: AppColors.inputFillOf(context),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: fieldBorderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: fieldBorderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: primary, width: 1.5),
+                      ),
+                    ),
+                    keyboardType: TextInputType.text,
+                    onChanged: (v) {
+                      setState(() {
+                        userID = v;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Checkbox(
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          value: _autoLogin,
+                          activeColor: primary,
+                          side: BorderSide(color: fieldBorderColor),
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _autoLogin = value ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        TIM_t("自动登录"),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.weakTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_loginError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: Text(
+                        _loginError!,
+                        style: const TextStyle(
+                          color: Color(0xFFE5484D),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primary,
+                        foregroundColor: AppColors.onPrimary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: _isLoggingIn ? null : userLogin,
+                      child: _isLoggingIn
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: AppColors.onPrimary,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              TIM_t("登录"),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      TIM_t("首次登录将自动创建账号"),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.weakTextColor,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              if (_loginError != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Text(
-                    _loginError!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isLoggingIn ? null : userLogin,
-                  child: _isLoggingIn
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          TIM_t("登录"),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

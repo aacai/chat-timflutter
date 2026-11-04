@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
@@ -290,10 +291,14 @@ class HomePageState extends State<HomePage> {
   }
 
   Widget? getTitle(LocalSetting localSetting) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
     return Text(
       pageTitle(localSetting)[currentIndex]!,
-      style: const TextStyle(
-          color: Colors.white, fontSize: IMDemoConfig.appBarTitleFontSize),
+      style: TextStyle(
+        color: theme.darkTextColor,
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 
@@ -366,8 +371,8 @@ class HomePageState extends State<HomePage> {
         arrowLength: 10.0,
         // maxHeight: 110,
         // maxWidth: 110,
-        borderColor: Colors.white,
-        backgroundColor: Colors.white,
+        borderColor: AppColors.dividerOf(context),
+        backgroundColor: AppColors.surfaceOf(context),
         shadowColor: Colors.black26,
         content: Wrap(
           direction: Axis.vertical,
@@ -405,34 +410,48 @@ class HomePageState extends State<HomePage> {
     return TencentPage(
         child: Scaffold(
             appBar: AppBar(
-              iconTheme: const IconThemeData(
-                color: Colors.white,
-              ),
-              shadowColor: theme.weakDividerColor,
-              elevation: currentIndex == 0 ? 0 : 1,
+              // 原来是大面积蓝紫渐变 + 白色标题，改为浅色底 + 主题色标题，
+              // 右下角换成圆形「+」，整体更接近主流 IM 的清爽风格。
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              shadowColor: Colors.transparent,
               automaticallyImplyLeading: false,
               leading: null,
+              centerTitle: false,
+              titleSpacing: 16,
+              backgroundColor: theme.weakBackgroundColor,
               title: getTitle(localSetting),
-              centerTitle: true,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    theme.lightPrimaryColor ?? CommonColor.lightPrimaryColor,
-                    theme.primaryColor ?? CommonColor.primaryColor
-                  ]),
-                ),
+              shape: Border(
+                bottom:
+                    BorderSide(color: theme.weakDividerColor ?? const Color(0x1F000000), width: 0.5),
               ),
               actions: [
                 if ([0, 1].contains(currentIndex))
                   Builder(builder: (BuildContext c) {
-                    return IconButton(
-                        onPressed: () {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: InkWell(
+                        onTap: () {
                           _showTooltip(c);
                         },
-                        icon: const Icon(
-                          Icons.add_circle_outline,
-                          color: Colors.white,
-                        ));
+                        borderRadius: BorderRadius.circular(22),
+                        child: Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: (theme.primaryColor ?? CommonColor.primaryColor)
+                                .withOpacity(0.10),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            size: 20,
+                            color:
+                                theme.primaryColor ?? CommonColor.primaryColor,
+                          ),
+                        ),
+                      ),
+                    );
                   })
               ],
             ),
@@ -441,34 +460,46 @@ class HomePageState extends State<HomePage> {
               children:
                   bottomNavigatorList(theme).map((res) => res.widget!).toList(),
             ),
-            bottomNavigationBar: BottomNavigationBar(
-              items: List.generate(
-                bottomNavigatorList(theme).length,
-                (index) => BottomNavigationBarItem(
-                  icon: index == currentIndex
-                      ? bottomNavigatorList(theme)[index].selectedIcon
-                      : bottomNavigatorList(theme)[index].unselectedIcon,
-                  label: bottomNavigatorList(theme)[index].title,
-                ),
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                    top:
+                        BorderSide(color: theme.weakDividerColor ?? const Color(0x1F000000), width: 0.5)),
               ),
-              currentIndex: currentIndex,
-              type: BottomNavigationBarType.fixed,
-              onTap: (index) {
-                _changePage(index, context);
-                if (isNeedMoveToConversation) {
-                  if (index == 0 && currentIndex == 0) {
-                    conversationKey.currentState
-                        ?.scrollToNextUnreadConversation();
+              child: BottomNavigationBar(
+                items: List.generate(
+                  bottomNavigatorList(theme).length,
+                  (index) => BottomNavigationBarItem(
+                    icon: index == currentIndex
+                        ? bottomNavigatorList(theme)[index].selectedIcon
+                        : bottomNavigatorList(theme)[index].unselectedIcon,
+                    label: bottomNavigatorList(theme)[index].title,
+                  ),
+                ),
+                currentIndex: currentIndex,
+                type: BottomNavigationBarType.fixed,
+                onTap: (index) {
+                  _changePage(index, context);
+                  if (isNeedMoveToConversation) {
+                    if (index == 0 && currentIndex == 0) {
+                      conversationKey.currentState
+                          ?.scrollToNextUnreadConversation();
+                    }
                   }
-                }
-                isNeedMoveToConversation = true;
-                Future.delayed(const Duration(milliseconds: 300), () {
-                  isNeedMoveToConversation = false;
-                });
-              },
-              selectedItemColor: theme.primaryColor,
-              unselectedItemColor: Colors.grey,
-              backgroundColor: theme.weakBackgroundColor,
+                  isNeedMoveToConversation = true;
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    isNeedMoveToConversation = false;
+                  });
+                },
+                selectedItemColor:
+                    theme.primaryColor ?? CommonColor.primaryColor,
+                unselectedItemColor: theme.weakTextColor ?? Colors.grey,
+                backgroundColor: theme.weakBackgroundColor,
+                elevation: 0,
+                selectedLabelStyle: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 11),
+              ),
             )),
         name: pageName);
   }

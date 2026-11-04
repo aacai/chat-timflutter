@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -42,7 +44,7 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
           ? null
           : AppBar(
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               ),
               shadowColor: theme.weakDividerColor,
               elevation: 1,
@@ -73,7 +75,20 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
           )
         ],
       ),
-      body: GridView.builder(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isWideScreen)
+            AppBackBar(
+              title: TIM_t("选择头像"),
+              actions: [
+                TextButton(
+                  onPressed: _submitAvatar,
+                  child: Text(TIM_t("确定")),
+                ),
+              ],
+            ),
+          Expanded(child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4, // 设置每行显示的网格数量
           childAspectRatio: 1.0, // 设置网格宽高比
@@ -103,7 +118,10 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
             ),
           );
         }
-      ),
+          ),
+        ),
+      ],
+    ),
     );
   }
 

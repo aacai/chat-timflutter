@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 
@@ -21,7 +22,7 @@ class PrivacyDocument extends StatelessWidget {
         shadowColor: theme.weakDividerColor,
         elevation: 1,
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         title: Text(
           title,

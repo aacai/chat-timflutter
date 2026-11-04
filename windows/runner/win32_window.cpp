@@ -97,7 +97,10 @@ const wchar_t* WindowClassRegistrar::GetWindowClass() {
     window_class.hInstance = GetModuleHandle(nullptr);
     window_class.hIcon =
         LoadIcon(window_class.hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-    window_class.hbrBackground = 0;
+    // 深色首帧背景：0（无画刷）会让系统在 Flutter 首帧之前填白。
+    static HBRUSH dark_brush =
+        CreateSolidBrush(RGB(0x1A, 0x1A, 0x1A));
+    window_class.hbrBackground = dark_brush;
     window_class.lpszMenuName = nullptr;
     window_class.lpfnWndProc = Win32Window::WndProc;
     RegisterClass(&window_class);

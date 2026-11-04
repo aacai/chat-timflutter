@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -9,11 +10,15 @@ import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 
 class DefaultThemeData with ChangeNotifier {
   ThemeType _currentThemeType = ThemeType.brisk;
-  DarkModeType _darkMode = DarkModeType.system;
+  DarkModeType _darkMode = DarkModeType.dark;
   final CoreServicesImpl _coreInstance = TIMUIKitCore.getInstance();
-  TUITheme _theme = DefTheme.getTheme(ThemeType.brisk, DarkModeType.system);
+  TUITheme _theme = DefTheme.getTheme(ThemeType.brisk, DarkModeType.dark);
 
   DefaultThemeData() {
+    // 立刻把主题同步给 TUIKit 组件（AppBar、搜索框、会话项等都读这份全局主题）。
+    // 之前只有 prefs 里存在 darkMode 记录时才会同步，导致首次启动时
+    // TUIKit 组件仍在用浅色主题，深色界面里出现一堆白底。
+    _applyTheme();
     _loadDarkMode();
   }
 
@@ -30,7 +35,34 @@ class DefaultThemeData with ChangeNotifier {
     }
   }
 
-  TUITheme get theme => DefTheme.getTheme(_currentThemeType, _darkMode);
+  TUITheme get theme {
+    final next = DefTheme.getTheme(_currentThemeType, _darkMode);
+    // TUIKit 的组件读的是 core 里的全局主题，而这里的 theme 是动态计算的。
+    // 两者一旦不一致，AppBar、搜索框、会话项就会在深色界面里冒出白底，
+    // 所以每次取 theme 都同步一次（只有颜色真的变了才写 core）。
+    if (!_sameTheme(_theme, next)) {
+      _theme = next;
+      final phase = SchedulerBinding.instance.schedulerPhase;
+      if (phase == SchedulerPhase.persistentCallbacks) {
+        // build 期间不能触发外部重建，延到本帧结束再同步。
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _coreInstance.setTheme(theme: next);
+        });
+      } else {
+        _coreInstance.setTheme(theme: next);
+      }
+    }
+    return next;
+  }
+
+  bool _sameTheme(TUITheme a, TUITheme b) {
+    return a.primaryColor == b.primaryColor &&
+        a.weakBackgroundColor == b.weakBackgroundColor &&
+        a.wideBackgroundColor == b.wideBackgroundColor &&
+        a.chatHeaderBgColor == b.chatHeaderBgColor &&
+        a.appbarBgColor == b.appbarBgColor &&
+        a.darkTextColor == b.darkTextColor;
+  }
 
   ThemeMode get themeMode {
     switch (_darkMode) {

@@ -14,8 +14,11 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-    <base href="/flutter/" />
+    <base href="$FLUTTER_BASE_HREF" />
 
+    <style id="launch-background-style">
+      html, body { background-color: #1A1A1A; margin: 0; }
+    </style>
     <meta charset="UTF-8" />
     <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
     <meta
@@ -76,30 +79,9 @@
             }
         }
 
-      var serviceWorkerVersion = null;
-      var scriptLoaded = false;
-      function loadMainDartJs() {
-        if (scriptLoaded) {
-          return;
-        }
-        scriptLoaded = true;
-        var scriptTag = document.createElement("script");
-        scriptTag.src = "main.dart.js";
-        scriptTag.type = "application/javascript";
-        document.body.append(scriptTag);
-      }
-      loadMainDartJs();
-
-      let el = document.documentElement;
-      if (el.requestFullScreen) {
-        el.requestFullScreen();
-      } else if (el.webkitRequestFullScreen) {
-        el.webkitRequestFullScreen();
-      } else if (el.mozRequestFullScreen) {
-        el.mozRequestFullScreen();
-      } else if (el.msRequestFullScreen) {
-        el.msRequestFullScreen();
-      }
     </script>
+    <!-- Flutter 3.41 起必须由官方 loader 引导：main.dart.js 依赖
+         _flutter.loader.didCreateEngineInitializer 回调，直接注入脚本不会启动引擎。 -->
+    <script src="flutter_bootstrap.js" async></script>
   </body>
 </html>

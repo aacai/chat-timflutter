@@ -1,5 +1,8 @@
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/contact_and_profile.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/me_and_tencent.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
@@ -30,6 +33,20 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
   initState() {
     super.initState();
     getLoginUserInfo();
+    // 宽屏主页是根路由，没有可 pop 的上一级；返回统一切回「消息」tab。
+    AppNavigation.onRootBack = () {
+      if (mounted) {
+        setState(() => homePageIndex = 0);
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    if (AppNavigation.onRootBack != null) {
+      AppNavigation.onRootBack = null;
+    }
+    super.dispose();
   }
 
   _navigateToChat(V2TimConversation conversation) {
@@ -59,13 +76,23 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
     return Row(
       children: [
         Container(
-          width: 64,
+          width: 72,
           decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [hexToColor("3f4c68"), hexToColor("3e4b67")])),
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
+            color: hexToColor("2E3440"),
+          ),
+          child: Column(
             children: [
+              // 宽屏主页是根路由，给一个始终可见的返回入口：
+              // 有上级就 pop，没有就切回「消息」tab，不会出现死路。
+              SizedBox(
+                height: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, size: 17),
+                  color: AppColors.onPrimary,
+                  tooltip: TIM_t("返回"),
+                  onPressed: () => AppNavigation.back(context),
+                ),
+              ),
               Expanded(
                 child: LeftBar(
                   index: homePageIndex,
@@ -75,7 +102,7 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
                     });
                   },
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -85,18 +112,18 @@ class HomePageWideScreenState extends State<HomePageWideScreen> {
                 if(PlatformUtils().isWindows) Container(
                   height: 40,
                   decoration: BoxDecoration(
-                      color: hexToColor("3f4c68")),
+                      color: hexToColor("2E3440")),
                 child: Row(
                   children: [
                     Expanded(child: MoveWindow()),
                     MinimizeWindowButton(colors: WindowButtonColors(
-                      iconNormal: Colors.white
+                      iconNormal: AppColors.onPrimary
                     ),),
                     MaximizeWindowButton(colors: WindowButtonColors(
-                        iconNormal: Colors.white
+                        iconNormal: AppColors.onPrimary
                     ),),
                     CloseWindowButton(colors: WindowButtonColors(
-                        iconNormal: Colors.white
+                        iconNormal: AppColors.onPrimary
                     ),)
                   ],
                 ),),

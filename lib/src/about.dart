@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
@@ -74,7 +75,7 @@ class AboutState extends State<About>{
       backgroundColor: theme.weakBackgroundColor,
       appBar: AppBar(
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         shadowColor: theme.weakDividerColor,
         elevation: 1,
@@ -135,6 +136,9 @@ class AboutState extends State<About>{
               context: context,
               builder: (BuildContext context) {
                 return AlertDialog(
+                  backgroundColor: AppColors.surfaceOf(context),
+                  titleTextStyle: TextStyle(color: AppColors.onSurfaceOf(context), fontSize: 18, fontWeight: FontWeight.w600),
+                  contentTextStyle: TextStyle(color: AppColors.onSurfaceOf(context), fontSize: 14),
                   title: Text(TIM_t("免责声明")),
                   content: Text(TIM_t(
                       "腾讯云IM APP（“本产品”）是由腾讯云提供的一款测试产品，腾讯云享有本产品的著作权和所有权。本产品仅用于功能体验，不得用于任何商业用途。严禁在使用中有任何色情、辱骂、暴恐、涉政等违法内容传播。")),

@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/home_page.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/home_page.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/login.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/custom_sticker_package.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -11,7 +13,13 @@ import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 
+/// 全应用唯一的 Navigator key。所有"切到登录页/主页"的跳转都走它，
+/// 而不是依赖某个 Widget 的 BuildContext——后者在页面重建/销毁后容易变成过期的
+/// context，往已 dispose 的 Navigator 里 push 就会抛
+/// "A Routes was used after being disposed"。
 class InitStep {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   static setTheme(String themeTypeString, BuildContext context) {
     final CoreServicesImpl _coreInstance = TIMUIKitCore.getInstance();
     ThemeType themeType = DefTheme.themeTypeFromString(themeTypeString);
@@ -59,41 +67,47 @@ class InitStep {
     });
   }
 
-  static directToLogin(BuildContext context, [Function? initIMSDKAndAddIMListeners]) {
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (BuildContext context, Animation<double> animation,
-            Animation secondaryAnimation) {
-          return FadeTransition(
-            opacity: animation,
-            child: LoginPage(initIMSDK: initIMSDKAndAddIMListeners),
-          );
-        },
-      ),
-      // 清空整个回退栈，让登录页成为新的根路由，避免返回时落在启动动画页。
-      (route) => false,
-    );
-  }
-
-  static directToHomePage(BuildContext context) {
-    final isWideScreen =
-        TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
+  static void directToLogin(BuildContext context, [Function? initIMSDKAndAddIMListeners]) {
+    _replace((navigator) {
+      navigator.pushReplacement(
+        PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 500),
           pageBuilder: (BuildContext context, Animation<double> animation,
               Animation secondaryAnimation) {
             return FadeTransition(
               opacity: animation,
-              child: isWideScreen
-                  ? const HomePageWideScreen()
-                  : const HomePage(),
+              child: LoginPage(initIMSDK: initIMSDKAndAddIMListeners),
             );
           },
-          settings: const RouteSettings(name: '/homePage')),
-      // 清空整个回退栈，让主页成为新的根路由，返回即退出应用而不是卡在启动动画页。
-      (route) => false,
-    );
+        ),
+      );
+    });
+  }
+
+  static void directToHomePage(BuildContext context) {
+    _replace((navigator) {
+      navigator.pushReplacement(
+        PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 500),
+            pageBuilder: (BuildContext context, Animation<double> animation,
+                Animation secondaryAnimation) {
+              return FadeTransition(
+                opacity: animation,
+                child: const ResponsiveHome(),
+              );
+            },
+            settings: const RouteSettings(name: '/homePage')),
+      );
+    });
+  }
+
+  /// 用全局 navigatorKey 做路由替换，避免依赖（可能过期的）BuildContext。
+  static void _replace(void Function(NavigatorState navigator) action) {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) {
+      debugPrint('[InitStep] navigator 尚未就绪，跳过路由跳转');
+      return;
+    }
+    action(navigator);
   }
 }

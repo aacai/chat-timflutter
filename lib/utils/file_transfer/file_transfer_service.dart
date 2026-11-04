@@ -10,6 +10,8 @@ import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_message.dart';
 import 'package:tencent_cloud_chat_sdk/tencent_im_sdk_plugin.dart';
 import 'package:tencent_cloud_chat_uikit/ui/controller/tim_uikit_chat_controller.dart';
+import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
+import 'package:tencent_cloud_chat_uikit/data_services/services_locatar.dart';
 
 import '../secure_channel/encryption_service.dart';
 import 'chunk_codec.dart';
@@ -172,7 +174,9 @@ class FileTransferService {
       chunkBytes: chunkSizeBytes,
     );
     try {
-      for (final part in parts) {
+      String? headerMsgID;
+      for (int i = 0; i < parts.length; i++) {
+        final part = parts[i];
         final bytes = await File(part.path).readAsBytes();
         final enc = await EncryptionService.instance.encryptFile(
           peerUserID: peerUserID ?? '',
@@ -190,7 +194,7 @@ class FileTransferService {
           partPath = part.path;
           partSize = part.size;
         }
-        await _sendPart(
+        final msgID = await _sendPart(
           controller: controller,
           partPath: partPath,
           fileName: fileName,
@@ -205,6 +209,12 @@ class FileTransferService {
             encrypted: isEncrypted,
           ),
         );
+        if (i == 0) {
+          headerMsgID = msgID;
+        }
+        if (headerMsgID != null) {
+          _setSendProgress(headerMsgID, ((i + 1) / parts.length * 100).round());
+        }
       }
       _records[fileId] = TransferRecord(
         fileId: fileId,
@@ -229,7 +239,7 @@ class FileTransferService {
   }
 
   /// [header] 为空就是普通文件；非空时把气泡伪装成整个文件，并且只有第 0 片计入未读。
-  Future<void> _sendPart({
+  Future<String?> _sendPart({
     required TIMUIKitChatController controller,
     required String partPath,
     required String fileName,
@@ -253,6 +263,14 @@ class FileTransferService {
     if (res == null || res.code != 0) {
       throw StateError("文件发送失败：${res?.desc ?? "无返回"}");
     }
+    return res.data?.msgID;
+  }
+
+  /// 把分片整体进度回填到第 0 片的消息进度上，气泡据此显示总百分比。
+  void _setSendProgress(String msgID, int percent) {
+    try {
+      serviceLocator<TUIChatGlobalModel>().setMessageProgress(msgID, percent);
+    } catch (_) {}
   }
 
   /// 收到（或从历史里读到）一条分片消息时调用；补齐后自动合并。

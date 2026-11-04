@@ -24,6 +24,8 @@ import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
+
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
@@ -173,11 +175,13 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
     final isInitSuccess = await _coreInstance.init(
       onWebLoginSuccess: getLoginUserInfo,
       uikitLogPath: logPath,
-      config: const TIMUIKitConfig(
+      config: TIMUIKitConfig(
         // This status is default to true,
         // its unnecessary to specify this if you tend to use online status.
         isShowOnlineStatus: true,
         isCheckDiskStorageSpace: true,
+        // 接管所有宽屏浮窗：统一主题色、始终有 ×、支持 Esc / 点击遮罩关闭。
+        showDesktopModalFunc: AppModal.showDesktopModal,
       ),
       // language: LanguageEnum.zhHans,
       // extraLanguage: localSetting.language,
@@ -305,8 +309,9 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
   dispose() {
     super.dispose();
     print("========isDispose-=========");
+    // 注意：Routes 是单例 ChangeNotifier，不能在这里 dispose——
+    // 否则应用退出/热重载后单例失效，再 notifyListeners() 推路由会崩。
     WidgetsBinding.instance.removeObserver(this);
-    Routes().dispose();
   }
 
   @override

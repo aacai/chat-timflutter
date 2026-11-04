@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import 'commonUtils.dart';
@@ -14,24 +15,16 @@ class ToastUtils {
   }
 
   static void toast(String msg) {
-    Widget toastItem = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25.0),
-        color: Colors.black45,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(child: Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white),),)
-        ],
-      ),
-    );
-
-    fToast?.showToast(
+    // SDK 回调不带 BuildContext，FToast 的 context 一旦失效会在
+    // MediaQuery.of 里抛空指针；改用原生 toast，不依赖 widget 树。
+    Fluttertoast.showToast(
+      msg: msg,
+      toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
-      child: toastItem,
+      timeInSecForIosWeb: 1,
+      textColor: AppColors.onPrimary,
+      fontSize: 14,
+      backgroundColor: Colors.black54,
     );
   }
 
@@ -41,7 +34,7 @@ class ToastUtils {
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
       timeInSecForIosWeb: 1,
-      textColor: Colors.white,
+      textColor: AppColors.onPrimary,
       fontSize: CommonUtils.adaptFontSize(20),
       backgroundColor: Colors.black,
     );

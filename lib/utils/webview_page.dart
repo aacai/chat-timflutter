@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -17,7 +18,7 @@ class WebviewPage extends StatelessWidget {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         shadowColor: theme.weakDividerColor,
         elevation: 1,

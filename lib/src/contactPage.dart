@@ -1,6 +1,7 @@
 // ignore_for_file: file_names, unnecessary_import
 
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/language_json/strings.g.dart';
@@ -48,13 +49,13 @@ class _ContactPageState extends State<ContactPage> {
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         shadowColor: theme.weakDividerColor,
         elevation: 1,
         title: Text(
           TIM_t("联系我们"),
-          style: const TextStyle(color: Colors.white, fontSize: 17),
+          style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
         ),
         flexibleSpace: Container(
           decoration: BoxDecoration(

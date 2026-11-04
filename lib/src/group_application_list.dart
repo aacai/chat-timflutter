@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/enum/group_application_type_enum.dart';
@@ -118,7 +119,7 @@ class _GroupApplicationListState extends State<GroupApplicationList> {
                                 CommonColor.weakTextColor)),
                     child: Text(
                       TIM_t("同意"),
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.onPrimary),
                     ),
                   ),
                   onTap: () async {
@@ -200,14 +201,14 @@ class _GroupApplicationListState extends State<GroupApplicationList> {
       backgroundColor: theme.weakBackgroundColor,
       appBar: AppBar(
         iconTheme: const IconThemeData(
-          color: Colors.white,
+          color: AppColors.onPrimary,
         ),
         elevation: 0,
         backgroundColor: theme.primaryColor,
         title: Text(
           TIM_t("进群申请列表"),
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.onPrimary,
             fontSize: 17,
           ),
         ),

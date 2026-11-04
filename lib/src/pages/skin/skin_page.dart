@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -67,7 +68,7 @@ class SkinPage extends StatelessWidget {
                                 color: Provider.of<DefaultThemeData>(context)
                                             .darkMode ==
                                         mode
-                                    ? Colors.white
+                                    ? AppColors.onPrimary
                                     : theme.weakTextColor,
                               ),
                             ),
@@ -109,13 +110,13 @@ class SkinPage extends StatelessWidget {
         defaultWidget: Scaffold(
             appBar: AppBar(
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               ),
               shadowColor: theme.weakDividerColor,
               elevation: 1,
               title: Text(
                 TIM_t("更换皮肤"),
-                style: const TextStyle(color: Colors.white, fontSize: 17),
+                style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
               ),
               flexibleSpace: Container(
                 decoration: BoxDecoration(
@@ -209,7 +210,7 @@ class SkinCube extends StatelessWidget {
                             }
                           },
                           value: themeType == currentThemeType,
-                          side: const BorderSide(color: Colors.white, width: 1),
+                          side: const BorderSide(color: AppColors.onPrimary, width: 1),
                           shape: const CircleBorder()),
                     ),
                     Positioned(
@@ -227,7 +228,7 @@ class SkinCube extends StatelessWidget {
                                     TIM_t(DefTheme
                                         .defaultThemeName[currentThemeType]!),
                                     style: const TextStyle(
-                                        color: Colors.white, fontSize: 16)))))
+                                        color: AppColors.onPrimary, fontSize: 16)))))
                   ],
                 ))));
   }

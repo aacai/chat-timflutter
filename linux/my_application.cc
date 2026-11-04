@@ -19,6 +19,14 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  // Flutter 首帧之前 GTK 窗口默认是白色，先给窗口套一层深色 CSS。
+  GtkCssProvider* provider = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(
+      provider, "window { background-color: #1A1A1A; }", -1, nullptr);
+  gtk_style_context_add_provider_for_screen(
+      gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider),
+      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(provider);  // launch-background-provider
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu

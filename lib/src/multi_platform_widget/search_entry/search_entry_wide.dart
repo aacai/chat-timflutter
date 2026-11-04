@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -240,7 +241,9 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: hexToColor("f3f3f4"),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.overlayOf(context)
+                        : hexToColor("f3f3f4"),
                     borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                   height: 30,
@@ -249,13 +252,13 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
                     children: [
                       Icon(
                         Icons.search,
-                        color: hexToColor("979797"),
+                        color: theme.weakTextColor ?? hexToColor("979797"),
                         size: 16,
                       ),
                       const SizedBox(width: 6),
                       Text(TIM_t("搜索"),
                           style: TextStyle(
-                            color: hexToColor("979797"),
+                            color: theme.weakTextColor ?? hexToColor("979797"),
                             fontSize: 12,
                           )),
                     ],
@@ -279,12 +282,14 @@ class _SearchEntryWideState extends State<SearchEntryWide> {
                 height: 30,
                 width: 30,
                 decoration: BoxDecoration(
-                  color: hexToColor("f3f3f4"),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.overlayOf(context)
+                      : hexToColor("f3f3f4"),
                   borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
                 child: Icon(
                   widget.plusType == PlusType.create ? Icons.add : Icons.person_add_alt,
-                  color: hexToColor("838383"),
+                  color: theme.weakTextColor ?? hexToColor("838383"),
                   size: 18,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 
@@ -85,10 +86,10 @@ class DefTheme {
       conversationItemOfflineStatusBgColor: Colors.grey,
       conversationItemUnreadCountBgColor:
           base.cautionColor ?? const Color(0xFFFF584C),
-      conversationItemUnreadCountTextColor: Colors.white,
+      conversationItemUnreadCountTextColor: AppColors.onPrimary,
       conversationItemDraftTextColor: base.cautionColor,
       conversationItemNoNotificationIconColor: weekText,
-      conversationItemSliderTextColor: Colors.white,
+      conversationItemSliderTextColor: AppColors.onPrimary,
       conversationItemSliderClearBgColor: base.primaryColor,
       conversationItemSliderPinBgColor: base.infoColor,
       conversationItemSliderDeleteBgColor: Colors.red,

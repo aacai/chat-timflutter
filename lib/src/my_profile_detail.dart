@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:adaptive_action_sheet/adaptive_action_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/about_us.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/contact_us.dart';
@@ -165,7 +167,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
           ? null
           : AppBar(
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               ),
               shadowColor: theme.weakDividerColor,
               elevation: 1,
@@ -183,7 +185,11 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                 ),
               ),
             ),
-      body: Container(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isWideScreen) AppBackBar(title: TIM_t("个人资料")),
+          Expanded(child: Container(
         color: isWideScreen ? theme.wideBackgroundColor : null,
         child: Column(
           children: [
@@ -494,6 +500,8 @@ class MyProfileDetailState extends State<MyProfileDetail> {
               ),
           ],
         ),
+          )),
+        ],
       ),
     );
   }

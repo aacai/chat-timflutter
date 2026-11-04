@@ -1,4 +1,6 @@
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
@@ -91,14 +93,20 @@ class _GroupListState extends State<GroupList> {
 
     return TUIKitScreenUtils.getDeviceWidget(
         context: context,
-        desktopWidget: groupList(),
+        desktopWidget: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppBackBar(title: TIM_t("群聊")),
+            Expanded(child: groupList()),
+          ],
+        ),
         defaultWidget: Scaffold(
           appBar: AppBar(
               title: Text(
                 TIM_t("群聊"),
-                style: const TextStyle(color: Colors.white, fontSize: 17),
+                style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
               ),
-              shadowColor: Colors.white,
+              shadowColor: Colors.transparent,
               flexibleSpace: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
@@ -108,7 +116,7 @@ class _GroupListState extends State<GroupList> {
                 ),
               ),
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               )),
           body: groupList(),
         ));

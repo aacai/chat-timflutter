@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
@@ -176,7 +177,7 @@ class _SearchState extends State<Search> {
     return TencentPage(
       child: Scaffold(
         appBar: AppBar(
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: AppColors.onPrimary),
           elevation: 0,
           backgroundColor: theme.primaryColor,
           title: Text(
@@ -185,7 +186,7 @@ class _SearchState extends State<Search> {
                     widget.conversation?.conversationID ??
                     TIM_t("相关聊天记录"))
                 : TIM_t("全局搜索"),
-            style: const TextStyle(color: Colors.white, fontSize: 17),
+            style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
           ),
         ),
         body: ChangeNotifierProvider.value(

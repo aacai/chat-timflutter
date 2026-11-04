@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/chat.dart';
@@ -184,7 +185,7 @@ class _ConversationAndChatState extends State<ConversationAndChat> {
                       width: 350,
                       height: MediaQuery.of(context).size.height,
                       decoration: BoxDecoration(
-                        color: theme.wideBackgroundColor ?? const Color(0xFFffffff),
+                        color: theme.wideBackgroundColor ?? AppColors.surfaceOf(context),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0xFFbebebe),
@@ -199,7 +200,7 @@ class _ConversationAndChatState extends State<ConversationAndChat> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: hexToColor("f5f6f7"),
+                              color: theme.weakBackgroundColor ?? AppColors.surfaceOf(context),
                               borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
                             ),
                             child: Row(
@@ -258,8 +259,8 @@ class _ConversationAndChatState extends State<ConversationAndChat> {
         if (currentConversation == null)
           Expanded(
               child: EmptyWidget(
-            title: TIM_t("腾讯云 · IM"),
-            description: TIM_t("服务亿级 QQ 用户的即时通讯技术"),
+            title: TIM_t("选择一个会话"),
+            description: TIM_t("在左侧选择会话，即可开始聊天"),
           ))
       ],
     );

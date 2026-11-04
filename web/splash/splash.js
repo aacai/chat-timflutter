@@ -3,5 +3,5 @@ function removeSplashFromWeb() {
   if (elem) {
     elem.remove();
   }
-  document.body.style.background = "transparent";
+  document.body.style.backgroundColor = "#1A1A1A";
 }

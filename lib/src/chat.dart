@@ -1,10 +1,12 @@
 // ignore_for_file: unused_field, unused_element, avoid_print, deprecated_member_use
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/group_application_list.dart';
@@ -14,6 +16,8 @@ import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
+import 'package:tencent_cloud_chat_demo/src/search.dart';
+import 'package:tencent_cloud_chat_uikit/ui/widgets/avatar.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/calling_message/calling_message_data_provider.dart';
 import 'package:tencent_cloud_chat_demo/utils/custom_message/custom_message_element.dart';
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
@@ -23,15 +27,16 @@ import 'package:tencent_cloud_chat_demo/utils/toast.dart';
 import 'package:tencent_cloud_chat_sdk/enum/group_type.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_conversation.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_info.dart'
-    if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_friend_info.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_message.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_message.dart';
+import 'package:tencent_cloud_chat_sdk/models/v2_tim_msg_create_info_result.dart'
+    if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_msg_create_info_result.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
   if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_text_elem.dart'
   if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_text_elem.dart';
 import 'package:tencent_cloud_chat_sdk/enum/message_elem_type.dart';
+import 'package:tencent_cloud_chat_sdk/enum/message_status.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/life_cycle/chat_life_cycle.dart';
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_chat_global_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/core/tim_uikit_wide_modal_operation_key.dart';
@@ -43,8 +48,6 @@ import 'package:tencent_cloud_chat_uikit/ui/utils/message.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitChat/TIMUIKitTextField/tim_uikit_text_field_layout/wide.dart';
-import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitProfile/profile_widget.dart';
-import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitProfile/widget/tim_uikit_profile_widget.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/link_preview/common/utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/wide_popup.dart';
 
@@ -62,6 +65,13 @@ class Chat extends StatefulWidget {
 
 class _ChatState extends State<Chat> {
   final TIMUIKitChatController _chatController = TIMUIKitChatController();
+  OverlayEntry? _moreMenuEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    TIMUIKitChat.onFilesDropped = _handleDroppedFiles;
+  }
   final TextEditingController _inputController = TextEditingController();
   /// 发送端本地明文缓存：key 为 msgID，避免自己发出的加密文本在本地显示成密文。
   final Map<String, String> _myPlaintextCache = {};
@@ -96,6 +106,8 @@ class _ChatState extends State<Chat> {
 
   @override
   void dispose() {
+    TIMUIKitChat.onFilesDropped = null;
+    _closeMoreMenu();
     _inputController.dispose();
     super.dispose();
   }
@@ -114,16 +126,60 @@ class _ChatState extends State<Chat> {
       conversationID: conv.conversationID ?? '',
       plain: text,
     );
-    final msg = V2TimMessage(
-      elemType: MessageElemType.V2TIM_ELEM_TYPE_TEXT,
-      textElem: V2TimTextElem(text: cipher),
-    );
-    final res = await _chatController.sendMessage(messageInfo: msg);
-    final id = res?.data?.msgID;
-    if (id != null && id.isNotEmpty) {
-      _myPlaintextCache[id] = text;
+    final createRes = await _createTextMessage(cipher);
+    final msg = createRes?.messageInfo;
+    if (msg == null) {
+      ToastUtils.toast(TIM_t("发送失败"));
+      return;
     }
-    _inputController.clear();
+    // SDK 返回的 messageInfo 在 macOS 上只有壳，textElem 为空，
+    // 本地气泡会渲染成一个空色块，这里强制写回消息体。
+    msg.elemType = MessageElemType.V2TIM_ELEM_TYPE_TEXT;
+    msg.textElem = V2TimTextElem(text: cipher);
+    // 本地消息列表用的就是这条消息自己的 id，先按本地 id 存好明文，
+    // 否则回执里的 msgID 对不上时，自己发出去的消息会显示成密文。
+    final localID = createRes?.id ?? msg.id;
+    if (localID != null && localID.isNotEmpty) {
+      _myPlaintextCache[localID] = text;
+    }
+    // 补齐发送者信息，保证气泡按"自己发的消息"渲染。
+    final loginUser = await TIMUIKitCore.getSDKInstance().getLoginUser();
+    if (loginUser.data != null && loginUser.data!.isNotEmpty) {
+      msg.sender = loginUser.data;
+    }
+    msg.isSelf = true;
+    try {
+      final res = await _chatController.sendMessage(messageInfo: msg);
+      debugPrint("[E2EE send] localID=${msg.id} cipherLen=${cipher.length} code=${res?.code} "
+          "desc=${res?.desc} msgID=${res?.data?.msgID}");
+      if (res == null) {
+        // controller 没拿到会话模型，消息根本没发出去，必须提示，否则界面毫无反馈。
+        ToastUtils.toast(TIM_t("发送失败"));
+        return;
+      }
+      final id = res.data?.msgID;
+      if (id != null && id.isNotEmpty) {
+        _myPlaintextCache[id] = text;
+      }
+      if (res.code != 0) {
+        ToastUtils.toast(TIM_t("发送失败") + (res.desc ?? ""));
+        return;
+      }
+      _inputController.clear();
+    } catch (e) {
+      debugPrint("send message failed: $e");
+      ToastUtils.toast(TIM_t("发送失败") + "$e");
+    }
+  }
+
+  /// 生成一条带合法 msgID 的文本消息。
+  /// TUIKit 发送路径内部取 messageInfo.id!，直接 new V2TimMessage 没有 id 会抛空指针，
+  /// 所以交给 SDK 生成，再由调用方替换成需要发送的内容。
+  Future<V2TimMsgCreateInfoResult?> _createTextMessage(String text) async {
+    final createRes = await TIMUIKitCore.getSDKInstance()
+        .getMessageManager()
+        .createTextMessage(text: text);
+    return createRes.data;
   }
 
   /// 替换默认输入框：纯文本加密输入 + 文件入口（文件走分片端到端加密）。
@@ -239,23 +295,373 @@ class _ChatState extends State<Chat> {
     }
   }
 
-  _buildBottomOperationList(BuildContext context, V2TimConversation conversation, VoidCallback closeFunc, TUITheme theme) {
-    List operationList = [
-      {
-        "label": TIM_t("发送消息"),
-        "id": "sendMsg",
-      }
-    ];
+  Widget _buildChatHeader() {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
+    final isWideScreen =
+        TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
+    final conv = widget.selectedConversation;
+    final title = conversationName ?? _getTitle();
+    final isGroup = conv.type == 2;
+    final primary = theme.primaryColor ?? const Color(0xFF147AFF);
+    final topPadding = MediaQuery.of(context).padding.top;
 
-    return operationList.map((e) {
-      return TIMUIKitProfileWidget.wideButton(
-        margin: const EdgeInsets.symmetric(vertical: 0),
-        smallCardMode: true,
-        onPressed: () => _itemClick(e["id"] ?? "", context, conversation, closeFunc),
-        text: e["label"] ?? "",
-        color: theme.primaryColor ?? hexToColor("3e4b67"),
-      );
-    }).toList();
+    return Container(
+      height: 56 + topPadding,
+      padding: EdgeInsets.only(top: topPadding, left: 12, right: 8),
+      decoration: BoxDecoration(
+        color: theme.weakBackgroundColor,
+        border: Border(
+          bottom: BorderSide(
+              color: (theme.weakDividerColor ?? Colors.grey).withOpacity(0.5),
+              width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (!isWideScreen)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 18),
+              color: theme.darkTextColor,
+              onPressed: () => Navigator.pop(context),
+            ),
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Avatar(
+              faceUrl: conv.faceUrl ?? '',
+              showName: title,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: theme.darkTextColor),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isGroup ? TIM_t("群聊") : "ID: ${conv.userID ?? ''}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: theme.weakTextColor),
+                ),
+              ],
+            ),
+          ),
+          _headerIconButton(Icons.search, theme, _openChatSearch, primary),
+          _headerIconButton(
+              Icons.more_horiz, theme, _openChatMore, primary),
+        ],
+      ),
+    );
+  }
+
+  Widget _headerIconButton(
+      IconData icon, TUITheme theme, VoidCallback onTap, Color primary) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        child: Icon(icon, size: 20, color: theme.weakTextColor),
+      ),
+    );
+  }
+
+  void _openChatSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Search(
+          conversation: widget.selectedConversation,
+          onTapConversation: (V2TimConversation conv,
+              [V2TimMessage? targetMsg]) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Chat(
+                  selectedConversation: conv,
+                  initFindingMsg: targetMsg,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _closeMoreMenu() {
+    _moreMenuEntry?.remove();
+    _moreMenuEntry = null;
+  }
+
+  void _openChatMore() {
+    if (_moreMenuEntry != null) {
+      _closeMoreMenu();
+      return;
+    }
+    _moreMenuEntry = _buildMoreMenuEntry();
+    Overlay.of(context).insert(_moreMenuEntry!);
+  }
+
+  OverlayEntry _buildMoreMenuEntry() {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
+    final isGroup = widget.selectedConversation.type == 2;
+    final top = 56 + MediaQuery.of(context).padding.top;
+    return OverlayEntry(
+      builder: (ctx) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _closeMoreMenu,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Positioned(
+            right: 12,
+            top: top,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: 196,
+                decoration: BoxDecoration(
+                  color: theme.weakBackgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: (theme.weakDividerColor ?? Colors.grey)
+                          .withOpacity(0.6)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _moreMenuItem(Icons.person_outline, TIM_t("查看资料"), () {
+                      _closeMoreMenu();
+                      if (isGroup) {
+                        final id = widget.selectedConversation.groupID;
+                        if (id != null) {
+                          Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => GroupProfilePage(groupID: id)));
+                        }
+                      } else {
+                        final id = widget.selectedConversation.userID;
+                        if (id != null) {
+                          Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => UserProfile(
+                                  userID: id,
+                                  onRemarkUpdate: (r) =>
+                                      setState(() => conversationName = r))));
+                        }
+                      }
+                    }),
+                    _moreMenuItem(Icons.search, TIM_t("搜索聊天记录"), () {
+                      _closeMoreMenu();
+                      _openChatSearch();
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _moreMenuItem(IconData icon, String label, VoidCallback onTap) {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(children: [
+          Icon(icon, size: 17, color: theme.weakTextColor),
+          const SizedBox(width: 10),
+          Text(label,
+              style: TextStyle(fontSize: 14, color: theme.darkTextColor)),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _handleDroppedFiles(List<String> paths) async {
+    final normalized = paths
+        .where((e) => e.isNotEmpty)
+        .map((e) => e.startsWith('file://') ? e.substring(7) : e)
+        .toList();
+    print('[drop] received ${paths.length} -> $normalized');
+    if (normalized.isEmpty || !mounted) {
+      print('[drop] empty or unmounted, skip');
+      return;
+    }
+    final confirmed = await _confirmSendFiles(normalized);
+    print('[drop] confirm=$confirmed');
+    if (!confirmed || !mounted) {
+      return;
+    }
+    for (final path in normalized) {
+      try {
+        await FileTransferService.instance.send(
+          controller: _chatController,
+          sourcePath: path,
+          conversationID: widget.selectedConversation.conversationID ?? '',
+        );
+        print('[drop] sent $path');
+      } catch (e) {
+        print('[drop] send error $e');
+        ToastUtils.toast(TIM_t("文件发送失败") + "$e");
+      }
+    }
+  }
+
+  String _fileName(String path) => path.split(Platform.pathSeparator).last;
+
+  String _fileSizeText(String path) {
+    try {
+      final size = File(path).lengthSync();
+      if (size >= 1024 * 1024 * 1024) {
+        return "${(size / 1024 / 1024 / 1024).toStringAsFixed(1)} GB";
+      }
+      if (size >= 1024 * 1024) {
+        return "${(size / 1024 / 1024).toStringAsFixed(1)} MB";
+      }
+      return "${(size / 1024).toStringAsFixed(1)} KB";
+    } catch (_) {
+      return '';
+    }
+  }
+
+  bool _needsChunk(List<String> paths) => paths.any((path) {
+        try {
+          return File(path).lengthSync() >
+              FileTransferService.singleFileLimitBytes;
+        } catch (_) {
+          return false;
+        }
+      });
+
+  Future<bool> _confirmSendFiles(List<String> paths) async {
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
+    final primary = theme.primaryColor ?? const Color(0xFF147AFF);
+    final title = conversationName ?? _getTitle();
+    final result = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 380,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.weakBackgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.28),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(Icons.send_outlined, size: 18, color: primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "${TIM_t("发送给")} $title",
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: theme.darkTextColor),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 14),
+                for (final path in paths.take(5))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      Icon(Icons.insert_drive_file_outlined,
+                          size: 18, color: primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _fileName(path),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 13, color: theme.darkTextColor),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(_fileSizeText(path),
+                          style: TextStyle(
+                              fontSize: 12, color: theme.weakTextColor)),
+                    ]),
+                  ),
+                if (_needsChunk(paths))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(TIM_t("文件较大，将自动分片发送"),
+                        style: TextStyle(fontSize: 12, color: primary)),
+                  ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(TIM_t("取消")),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 36,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primary,
+                          foregroundColor: AppColors.onPrimary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: Text(TIM_t("发送")),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return result ?? false;
   }
 
   void onClickUserName(Offset offset, TUITheme theme, [String? user]) {
@@ -265,37 +671,24 @@ class _ChatState extends State<Chat> {
       TUIKitWidePopup.showPopupWindow(
           operationKey: TUIKitWideModalOperationKey.showUserProfileFromChat,
           context: context,
+          theme: theme,
           isDarkBackground: false,
-          width: 350,
+          width: 440,
           offset: offset,
-          height: (widget.selectedConversation.type == 2) ? 490 : 444,
+          height: (MediaQuery.of(context).size.height * 0.86)
+              .clamp(520.0, 720.0)
+              .toDouble(),
           child: (closeFunc) => Container(
-                padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
-                child: TIMUIKitProfile(
-                  smallCardMode: true,
-                  profileWidgetBuilder: ProfileWidgetBuilder(customBuilderOne: (bool isFriend, V2TimFriendInfo friendInfo, V2TimConversation conversation) {
-                    // If you don't allow sending message when friendship not exist,
-                    // please not comment the following lines.
-
-                    // if(!isFriend){
-                    //   return Container();
-                    // }
-                    return Column(children: _buildBottomOperationList(context, conversation, closeFunc, theme));
-                  }),
-                  profileWidgetsOrder: [
-                    ProfileWidgetEnum.userInfoCard,
-                    ProfileWidgetEnum.operationDivider,
-                    ProfileWidgetEnum.remarkBar,
-                    ProfileWidgetEnum.genderBar,
-                    ProfileWidgetEnum.birthdayBar,
-                    ProfileWidgetEnum.operationDivider,
-                    ProfileWidgetEnum.addToBlockListBar,
-                    ProfileWidgetEnum.pinConversationBar,
-                    ProfileWidgetEnum.messageMute,
-                    ProfileWidgetEnum.addAndDeleteArea,
-                    if (widget.selectedConversation.type == 2) ProfileWidgetEnum.customBuilderOne,
-                  ],
+                color: theme.weakBackgroundColor,
+                child: ProfileBody(
                   userID: userID ?? "",
+                  compact: true,
+                  onClose: closeFunc,
+                  onRemarkUpdate: (newRemark) {
+                    setState(() {
+                      conversationName = newRemark;
+                    });
+                  },
                 ),
               ));
     } else {
@@ -309,7 +702,7 @@ class _ChatState extends State<Chat> {
   Widget build(BuildContext context) {
     final LocalSetting localSetting = Provider.of<LocalSetting>(context);
     final isWideScreen = TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop;
-    final theme = Provider.of<DefaultThemeData>(context).theme;
+    final theme = Provider.of<DefaultThemeData>(context, listen: false).theme;
     final groupID = widget.selectedConversation.groupID;
     final groupType = widget.selectedConversation.groupType;
     List<String> notAllowGroupType = [GroupType.Community, GroupType.AVChatRoom];
@@ -339,7 +732,14 @@ class _ChatState extends State<Chat> {
           // 历史消息入站解密（异步钩子，可解密）。
           return await Future.wait(messageList.map(_decryptIncoming));
         }, messageShouldMount: (V2TimMessage message) {
-          return !FileTransferService.shouldHide(message.cloudCustomData);
+          if (FileTransferService.shouldHide(message.cloudCustomData)) {
+            return false;
+          }
+          if (message.status == MessageStatus.V2TIM_MSG_STATUS_SEND_FAIL &&
+              message.elemType == MessageElemType.V2TIM_ELEM_TYPE_FILE) {
+            return false;
+          }
+          return true;
         }, messageListShouldMount: (messageList) {
           // 同步钩子，无法等待解密；解密已在 didGetHistoricalMessageList / newMessageWillMount 完成。
           List<V2TimMessage> list = [];
@@ -531,56 +931,7 @@ class _ChatState extends State<Chat> {
                 ))
           ],
         ),
-        customAppBar: isWideScreen
-            ? ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 60),
-                child: Stack(
-                  children: [
-                    Column(
-                      children: [
-                        Expanded(
-                          child: TIMUIKitAppBar(
-                            onClickTitle: (details) {
-                              onClickUserName(Offset(details.globalPosition.dx, details.globalPosition.dy), theme);
-                            },
-                            config: AppBar(
-                              backgroundColor: isWideScreen ? hexToColor("fafafa") : hexToColor("f2f3f5"),
-                              actions: [
-                                IconButton(
-                                    padding: const EdgeInsets.only(left: 8, right: 16),
-                                    onPressed: () async {
-                                      onClickUserName(Offset(MediaQuery.of(context).size.width - 380, 30), theme);
-                                    },
-                                    icon: Icon(
-                                      Icons.more_horiz,
-                                      color: hexToColor("010000"),
-                                      size: 20,
-                                    ))
-                              ],
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      conversationName ?? _getTitle(),
-                                      style: TextStyle(
-                                        color: hexToColor("010000"),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              )
-            : null,
+        customAppBar: _buildChatHeader(),
           ),
         ],
       ),

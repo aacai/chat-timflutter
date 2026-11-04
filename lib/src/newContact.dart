@@ -1,6 +1,8 @@
 // ignore_for_file: file_names
 
+import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_friend_application.dart'
@@ -109,14 +111,20 @@ class _NewContactState extends State<NewContact> {
 
     return TUIKitScreenUtils.getDeviceWidget(
         context: context,
-        desktopWidget: newContactWidget(),
+        desktopWidget: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppBackBar(title: TIM_t("新的联系人")),
+            Expanded(child: newContactWidget()),
+          ],
+        ),
         defaultWidget: Scaffold(
           appBar: AppBar(
               title: Text(
                 TIM_t("新的联系人"),
-                style: const TextStyle(color: Colors.white, fontSize: 17),
+                style: const TextStyle(color: AppColors.onPrimary, fontSize: 17),
               ),
-              shadowColor: Colors.white,
+              shadowColor: Colors.transparent,
               flexibleSpace: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
@@ -126,7 +134,7 @@ class _NewContactState extends State<NewContact> {
                 ),
               ),
               iconTheme: const IconThemeData(
-                color: Colors.white,
+                color: AppColors.onPrimary,
               )),
           body: newContactWidget(),
         ));

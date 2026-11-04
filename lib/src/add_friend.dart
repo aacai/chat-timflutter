@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
 import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
@@ -35,7 +36,7 @@ class AddFriend extends StatelessWidget {
         ),
         defaultWidget: Scaffold(
           appBar: AppBar(
-            shadowColor: Colors.white,
+            shadowColor: Colors.transparent,
             title: Text(
               TIM_t("添加好友"),
               style: TextStyle(color: hexToColor("1f2329"), fontSize: 16),

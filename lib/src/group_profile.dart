@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart' show showCupertinoModalPopup, CupertinoActionSheet, CupertinoActionSheetAction;
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -18,7 +19,8 @@ import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_friendsh
 import 'package:tencent_cloud_chat_uikit/business_logic/view_models/tui_self_info_view_model.dart';
 import 'package:tencent_cloud_chat_uikit/data_services/services_locatar.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
-import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info.dart';
+import 'package:tencent_cloud_chat_sdk/models/v2_tim_group_info.dart'
+    if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_group_info.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/platform.dart';
 import 'package:tencent_cloud_chat_uikit/ui/views/TIMUIKitAddFriend/tim_uikit_send_application.dart';
@@ -141,6 +143,9 @@ class GroupProfilePage extends StatelessWidget {
       showDialog(
           context: ctx,
           builder: (c) => AlertDialog(
+                backgroundColor: AppColors.surfaceOf(ctx),
+                titleTextStyle: TextStyle(color: AppColors.onSurfaceOf(ctx), fontSize: 18, fontWeight: FontWeight.w600),
+                contentTextStyle: TextStyle(color: AppColors.onSurfaceOf(ctx), fontSize: 14),
                 title: Text(TIM_t("设置群昵称")),
                 content: TextField(controller: ctrl),
                 actions: [
