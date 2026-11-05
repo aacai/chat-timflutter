@@ -70,7 +70,6 @@ class _ChatState extends State<Chat> {
   @override
   void initState() {
     super.initState();
-    TIMUIKitChat.onFilesDropped = _handleDroppedFiles;
   }
   final TextEditingController _inputController = TextEditingController();
   /// 发送端本地明文缓存：key 为 msgID，避免自己发出的加密文本在本地显示成密文。
@@ -106,7 +105,6 @@ class _ChatState extends State<Chat> {
 
   @override
   void dispose() {
-    TIMUIKitChat.onFilesDropped = null;
     _closeMoreMenu();
     _inputController.dispose();
     super.dispose();
@@ -502,36 +500,6 @@ class _ChatState extends State<Chat> {
         ]),
       ),
     );
-  }
-
-  Future<void> _handleDroppedFiles(List<String> paths) async {
-    final normalized = paths
-        .where((e) => e.isNotEmpty)
-        .map((e) => e.startsWith('file://') ? e.substring(7) : e)
-        .toList();
-    print('[drop] received ${paths.length} -> $normalized');
-    if (normalized.isEmpty || !mounted) {
-      print('[drop] empty or unmounted, skip');
-      return;
-    }
-    final confirmed = await _confirmSendFiles(normalized);
-    print('[drop] confirm=$confirmed');
-    if (!confirmed || !mounted) {
-      return;
-    }
-    for (final path in normalized) {
-      try {
-        await FileTransferService.instance.send(
-          controller: _chatController,
-          sourcePath: path,
-          conversationID: widget.selectedConversation.conversationID ?? '',
-        );
-        print('[drop] sent $path');
-      } catch (e) {
-        print('[drop] send error $e');
-        ToastUtils.toast(TIM_t("文件发送失败") + "$e");
-      }
-    }
   }
 
   String _fileName(String path) => path.split(Platform.pathSeparator).last;
