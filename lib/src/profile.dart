@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/about.dart';
+import 'package:tencent_cloud_chat_demo/src/avatar_select_page.dart';
 import 'package:tencent_cloud_chat_demo/src/my_profile_detail.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/skin/skin_page.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
@@ -51,6 +52,17 @@ class _ProfileState extends State<MyProfile> {
       return TIM_t("禁止加我为好友");
     }
     return TIM_t("未指定");
+  }
+
+  Future<void> _changeAvatar(V2TimUserFullInfo? userProfile) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AvatarSelectPage(
+            controller: _timuiKitProfileController,
+            selectedAvatarUrl: userProfile?.faceUrl ?? ""),
+      ),
+    );
   }
 
   _handleLogout() async {
@@ -135,7 +147,9 @@ class _ProfileState extends State<MyProfile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GestureDetector(
+                  ProfileHeader(
+                    userInfo: userProfile,
+                    showArrowRightIcon: true,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -144,10 +158,7 @@ class _ProfileState extends State<MyProfile> {
                             controller: _timuiKitProfileController),
                       ),
                     ),
-                    child: ProfileHeader(
-                      userInfo: userProfile,
-                      showArrowRightIcon: true,
-                    ),
+                    onChangeAvatar: () => _changeAvatar(userProfile),
                   ),
                   ProfileSection(
                     title: TIM_t("偏好设置"),

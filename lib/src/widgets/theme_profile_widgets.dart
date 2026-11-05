@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:tencent_cloud_chat_demo/src/widgets/avatar_viewer.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
@@ -303,14 +304,14 @@ class ThemeListItem extends StatelessWidget {
 /// 不再使用整块主色渐变大卡片。
 class ProfileHeader extends StatelessWidget {
   final V2TimUserFullInfo? userInfo;
-  final VoidCallback? onClickAvatar;
+  final VoidCallback? onChangeAvatar;
   final VoidCallback? onTap;
   final bool showArrowRightIcon;
 
   const ProfileHeader({
     Key? key,
     this.userInfo,
-    this.onClickAvatar,
+    this.onChangeAvatar,
     this.onTap,
     this.showArrowRightIcon = false,
   }) : super(key: key);
@@ -327,27 +328,32 @@ class ProfileHeader extends StatelessWidget {
     final showName = nickName.isNotEmpty ? nickName : userID;
     final isNarrow = MediaQuery.of(context).size.width < 400;
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: isNarrow ? 16 : 24, vertical: isNarrow ? 18 : 24),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: onClickAvatar,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: accent.withValues(alpha: 0.35), width: 2),
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 16 : 24, vertical: isNarrow ? 18 : 24),
+          child: Row(
+            children: [
+              // 头像与信息区各自独立响应点击，避免嵌套手势互相抢事件。
+              GestureDetector(
+                onTap: () => showAvatarViewer(
+                  context: context,
+                  imageUrl: userInfo?.faceUrl ?? "",
+                  showName: showName,
+                  onChangeAvatar: onChangeAvatar,
+                ),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: accent.withValues(alpha: 0.35), width: 2),
+                  ),
+                  child: ClipOval(
                     child: SizedBox(
                       width: isNarrow ? 56 : 68,
                       height: isNarrow ? 56 : 68,
@@ -358,8 +364,12 @@ class ProfileHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: isNarrow ? 14 : 18),
-                Expanded(
+              ),
+              SizedBox(width: isNarrow ? 14 : 18),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onTap,
+                  behavior: HitTestBehavior.translucent,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -391,14 +401,14 @@ class ProfileHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (showArrowRightIcon)
-                  Icon(Icons.chevron_right, color: weakText, size: 20),
-              ],
-            ),
+              ),
+              if (showArrowRightIcon)
+                Icon(Icons.chevron_right, color: weakText, size: 20),
+            ],
           ),
-          Divider(height: 1, thickness: 0.5, color: AppColors.dividerOf(context)),
-        ],
-      ),
+        ),
+        Divider(height: 1, thickness: 0.5, color: AppColors.dividerOf(context)),
+      ],
     );
   }
 }

@@ -129,8 +129,7 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
           const SizedBox(height: 12),
           Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+              ClipOval(
                 child: SizedBox(
                   width: 56,
                   height: 56,
@@ -268,11 +267,11 @@ class AvatarSelectPageState extends State<AvatarSelectPage> {
                   onTap: () => setState(() => _selectedUrl = url),
                   child: Container(
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       border: Border.all(
                         color: selected ? accent : Colors.transparent,
                         width: 2,
                       ),
-                      borderRadius: BorderRadius.circular(10),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(

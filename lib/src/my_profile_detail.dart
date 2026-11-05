@@ -236,7 +236,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                     children: [
                       ProfileHeader(
                         userInfo: userProfile,
-                        onClickAvatar: () => showSelectAvatarPage(context),
+                        onChangeAvatar: () => showSelectAvatarPage(context),
                       ),
                       ProfileSection(
                         title: TIM_t("基本信息"),

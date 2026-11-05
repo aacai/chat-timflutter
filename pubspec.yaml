@@ -70,6 +70,8 @@ dependencies:
   universal_html: ^2.2.2
   device_info_plus: ^10.1.2
   permission_handler: ^11.4.0
+  # 头像保存到相册（已在 uikit 依赖树中）
+  image_gallery_saver_plus: ^4.0.0
 
 dependency_overrides:
   # Flutter 3.32.4 requires the use of intl: ^0.20.2 version, which is also available in Flutter 3.29.x version
