@@ -24,6 +24,13 @@ class AppColors {
           ? darkSurface
           : lightSurface;
 
+  /// 浮起表面（弹窗、分组卡片）：比页面底色亮一档，用来建立层级。
+  /// 深色下不能用纯白，浅色下用白色与页面浅灰拉开对比。
+  static Color elevatedSurfaceOf(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF242528)
+          : const Color(0xFFFFFFFF);
+
   static Color onSurfaceOf(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFFEAEAEA)

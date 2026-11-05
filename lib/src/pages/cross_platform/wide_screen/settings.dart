@@ -5,11 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tencent_chat_i18n_tool/tools/i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/about_us.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/cross_platform/wide_screen/contact_us.dart';
-import 'package:tencent_cloud_chat_demo/src/pages/skin/skin_page.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/login_user_Info.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
+import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
 import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
 import 'package:tencent_cloud_chat_demo/utils/request.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
@@ -45,50 +45,84 @@ class SettingsState extends State<Settings> {
     final option1 = loginUserInfo.userID;
 
     Widget title(String item, bool isNeedDivider) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isNeedDivider)
-            const SizedBox(
-              height: 30,
+      return Padding(
+        padding: EdgeInsets.only(top: isNeedDivider ? 24 : 8, bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isNeedDivider)
+              Divider(
+                  height: 1,
+                  thickness: 0.5,
+                  color: AppColors.dividerOf(context)),
+            if (isNeedDivider) const SizedBox(height: 20),
+            Text(
+              item,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.weakTextOf(context)),
             ),
-          if (isNeedDivider)
-            SizedBox(
-              height: 1,
-              child: Container(
-                color: theme.weakDividerColor,
-              ),
-            ),
-          const SizedBox(
-            height: 30,
-          ),
-          Text(
-            item,
-            style: TextStyle(fontSize: 18, color: theme.darkTextColor),
-          ),
-          const SizedBox(
-            height: 30,
-          ),
-        ],
+          ],
+        ),
       );
     }
 
     Widget secondTitle(String item, bool isTheFirst) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isTheFirst)
-            const SizedBox(
-              height: 20,
+      return Padding(
+        padding: EdgeInsets.only(top: isTheFirst ? 4 : 16, bottom: 8),
+        child: Text(
+          item,
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppColors.onSurfaceOf(context)),
+        ),
+      );
+    }
+
+    // 弹窗内不再嵌 SkinPage 的桌面滚动视图（放进 ListView 会无界高度报错），
+    // 直接用紧凑色块切换主题，构建更轻、也不依赖窗口宽度。
+    Widget themeChips() {
+      final themeData = Provider.of<DefaultThemeData>(context);
+      final accent = theme.primaryColor;
+      return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: ThemeType.values.map((type) {
+          final selected = themeData.currentThemeType == type;
+          final base = DefTheme.defaultTheme[type]!;
+          final start = base.lightPrimaryColor ?? accent;
+          final end = base.primaryColor ?? accent;
+          return GestureDetector(
+            onTap: () => themeData.currentThemeType = type,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                        colors: [start ?? accent ?? Colors.blue, end ?? accent ?? Colors.blue]),
+                    border: selected
+                        ? Border.all(color: accent ?? Colors.blue, width: 2)
+                        : null,
+                  ),
+                  child: selected
+                      ? const Icon(Icons.check,
+                          size: 18, color: AppColors.onPrimary)
+                      : null,
+                ),
+                const SizedBox(height: 6),
+                Text(TIM_t(DefTheme.defaultThemeName[type]!),
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.weakTextOf(context))),
+              ],
             ),
-          Text(
-            item,
-            style: TextStyle(fontSize: 16, color: theme.darkTextColor),
-          ),
-          const SizedBox(
-            height: 16,
-          ),
-        ],
+          );
+        }).toList(),
       );
     }
 
@@ -286,7 +320,7 @@ class SettingsState extends State<Settings> {
               ],
             ),
             secondTitle(TIM_t("主题"), false),
-            SkinPage(key: widget.key),
+            themeChips(),
             secondTitle(TIM_t("语言"), false),
             Row(
               children: [

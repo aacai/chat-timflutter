@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_user_full_info.dart'
     if (dart.library.html) 'package:tencent_cloud_chat_sdk/web/compatible_models/v2_tim_user_full_info.dart';
-import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/ui/utils/screen_utils.dart';
 import 'package:tencent_cloud_chat_uikit/ui/widgets/avatar.dart';
@@ -296,6 +295,288 @@ class ThemeListItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 资料页头部：头像 + 昵称 + 账号 + 签名，用留白和分隔线建立层级，
+/// 不再使用整块主色渐变大卡片。
+class ProfileHeader extends StatelessWidget {
+  final V2TimUserFullInfo? userInfo;
+  final VoidCallback? onClickAvatar;
+  final VoidCallback? onTap;
+  final bool showArrowRightIcon;
+
+  const ProfileHeader({
+    Key? key,
+    this.userInfo,
+    this.onClickAvatar,
+    this.onTap,
+    this.showArrowRightIcon = false,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
+    final accent = theme.primaryColor ?? CommonColor.primaryColor;
+    final onSurface = AppColors.onSurfaceOf(context);
+    final weakText = AppColors.weakTextOf(context);
+    final nickName = userInfo?.nickName ?? "";
+    final userID = userInfo?.userID ?? "";
+    final signature = userInfo?.selfSignature ?? "";
+    final showName = nickName.isNotEmpty ? nickName : userID;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onClickAvatar,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: accent.withValues(alpha: 0.35), width: 2),
+                    ),
+                    child: SizedBox(
+                      width: 68,
+                      height: 68,
+                      child: Avatar(
+                        faceUrl: userInfo?.faceUrl ?? "",
+                        showName: showName,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        showName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w600,
+                            color: onSurface),
+                      ),
+                      const SizedBox(height: 6),
+                      SelectableText(
+                        "ID: $userID",
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 12, color: weakText),
+                      ),
+                      if (signature.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          signature,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, color: weakText),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (showArrowRightIcon)
+                  Icon(Icons.chevron_right, color: weakText, size: 20),
+              ],
+            ),
+          ),
+          Divider(height: 1, thickness: 0.5, color: AppColors.dividerOf(context)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 资料页的一行：左标题（可带说明），右值 / 开关 / 箭头。
+/// 空值、危险操作都有对应的弱化与警示态。
+class ProfileRow extends StatelessWidget {
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
+  final String? description;
+  final Color? valueColor;
+  final bool valueMuted;
+  final bool showArrow;
+  final bool danger;
+  final VoidCallback? onTap;
+  final void Function(TapDownDetails details)? onTapDown;
+  final bool? switchValue;
+  final ValueChanged<bool>? onSwitchChanged;
+
+  const ProfileRow({
+    Key? key,
+    required this.label,
+    this.value,
+    this.valueWidget,
+    this.description,
+    this.valueColor,
+    this.valueMuted = false,
+    this.showArrow = true,
+    this.danger = false,
+    this.onTap,
+    this.onTapDown,
+    this.switchValue,
+    this.onSwitchChanged,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<DefaultThemeData>(context).theme;
+    final onSurface = AppColors.onSurfaceOf(context);
+    final weakText = AppColors.weakTextOf(context);
+    final dangerColor = theme.cautionColor ?? const Color(0xFFFF584C);
+
+    if (danger) {
+      return InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 50,
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: dangerColor),
+          ),
+        ),
+      );
+    }
+
+    final isSwitch = onSwitchChanged != null;
+    return InkWell(
+      onTap: onTap,
+      onTapDown: onTapDown,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label,
+                      style: TextStyle(fontSize: 14, color: onSurface)),
+                  if (description != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(description!,
+                          style: TextStyle(fontSize: 12, color: weakText)),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            if (isSwitch)
+              Transform.scale(
+                scale: 0.85,
+                child: CupertinoSwitch(
+                  value: switchValue ?? false,
+                  onChanged: onSwitchChanged,
+                  activeColor: theme.primaryColor,
+                ),
+              )
+            else ...[
+              Flexible(
+                child: valueWidget ??
+                    Text(
+                      value ?? "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: valueColor ??
+                              (valueMuted ? weakText : onSurface)),
+                    ),
+              ),
+              if (showArrow)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child:
+                      Icon(Icons.chevron_right, size: 18, color: weakText),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 分组资料卡：分组标题 + 一整块连续列表，行间细分割线。
+/// 相比每行一张独立卡片，视觉更收敛，信息层级更清楚。
+class ProfileSection extends StatelessWidget {
+  final String? title;
+  final List<ProfileRow> rows;
+
+  const ProfileSection({Key? key, this.title, required this.rows})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = AppColors.elevatedSurfaceOf(context);
+    final divider = AppColors.dividerOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Text(
+              title!,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.weakTextOf(context)),
+            ),
+          )
+        else
+          const SizedBox(height: 16),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: divider, width: 0.5),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (int i = 0; i < rows.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        indent: 16,
+                        color: divider),
+                  rows[i],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

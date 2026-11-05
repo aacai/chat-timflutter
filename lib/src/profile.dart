@@ -44,36 +44,26 @@ class _ProfileState extends State<MyProfile> {
   final V2TIMManager sdkInstance = TIMUIKitCore.getSDKInstance();
   final TIMUIKitProfileController _timuiKitProfileController =
       TIMUIKitProfileController();
-  String? userID;
 
   String _getAllowText(int? allowType) {
     if (allowType == 0) {
       return TIM_t("允许任何人");
     }
-
     if (allowType == 1) {
       return TIM_t("需要验证信息");
     }
-
     if (allowType == 2) {
       return TIM_t("禁止加我为好友");
     }
-
     return TIM_t("未指定");
   }
 
   _handleLogout() async {
     final res = await _coreServices.logout();
-
     if (res.code == 0) {
       await AutoLoginStore.clearAll();
       EncryptionService.instance.clearPeerCache();
       Routes().directToLoginPage();
-
-      // Navigator.of(context).pushAndRemoveUntil(
-      //   MaterialPageRoute(builder: (BuildContext context) => const LoginPage()),
-      //   ModalRoute.withName('/'),
-      // );
     }
   }
 
@@ -85,22 +75,42 @@ class _ProfileState extends State<MyProfile> {
       actions: chunkSizePresetsMB
           .map((mb) => BottomSheetAction(
                 title: Text(
-                  mb == current ? TIM_t_para("{{mb}} MB ✓", "$mb MB ✓")(mb: mb) : "$mb MB",
+                  mb == current
+                      ? TIM_t_para("{{mb}} MB ✓", "$mb MB ✓")(mb: mb)
+                      : "$mb MB",
                   style: TextStyle(color: theme.primaryColor, fontSize: 18),
                 ),
                 onPressed: (_) {
                   localSetting.chunkSizeMB = mb;
-                  FileTransferService.instance.chunkSizeBytes = mb * 1024 * 1024;
+                  FileTransferService.instance.chunkSizeBytes =
+                      mb * 1024 * 1024;
                   Navigator.of(context, rootNavigator: true).pop();
                 },
               ))
           .toList(),
       cancelAction: CancelAction(
-        title: Text(
-          TIM_t("取消"),
-          style: const TextStyle(fontSize: 18),
-        ),
+        title: Text(TIM_t("取消"), style: const TextStyle(fontSize: 18)),
       ),
+    );
+  }
+
+  void _showDarkModeSheet(DefaultThemeData themeData) {
+    showAdaptiveActionSheet(
+      context: context,
+      actions: DarkModeType.values
+          .map((mode) => BottomSheetAction(
+                title: Text(
+                  mode == themeData.darkMode ? "${mode.label} ✓" : mode.label,
+                  style: TextStyle(
+                      color: themeData.theme.primaryColor, fontSize: 16),
+                ),
+                onPressed: (_) {
+                  themeData.darkMode = mode;
+                  Navigator.of(context, rootNavigator: true).pop();
+                },
+              ))
+          .toList(),
+      cancelAction: CancelAction(title: Text(TIM_t("取消"))),
     );
   }
 
@@ -117,29 +127,24 @@ class _ProfileState extends State<MyProfile> {
       context: context,
       actions: <BottomSheetAction>[
         BottomSheetAction(
-          title: Text(
-            TIM_t("允许任何人"),
-            style: TextStyle(color: theme.primaryColor, fontSize: 18),
-          ),
+          title: Text(TIM_t("允许任何人"),
+              style: TextStyle(color: theme.primaryColor, fontSize: 18)),
           onPressed: (_) {
             changeFriendVerificationMethod(allowAny);
             Navigator.of(context, rootNavigator: true).pop();
           },
         ),
         BottomSheetAction(
-            title: Text(
-              TIM_t("需要验证信息"),
-              style: TextStyle(color: theme.primaryColor, fontSize: 18),
-            ),
-            onPressed: (_) {
-              changeFriendVerificationMethod(neddConfirm);
-              Navigator.of(context, rootNavigator: true).pop();
-            }),
+          title: Text(TIM_t("需要验证信息"),
+              style: TextStyle(color: theme.primaryColor, fontSize: 18)),
+          onPressed: (_) {
+            changeFriendVerificationMethod(neddConfirm);
+            Navigator.of(context, rootNavigator: true).pop();
+          },
+        ),
         BottomSheetAction(
-          title: Text(
-            TIM_t("禁止加我为好友"),
-            style: TextStyle(color: theme.primaryColor, fontSize: 18),
-          ),
+          title: Text(TIM_t("禁止加我为好友"),
+              style: TextStyle(color: theme.primaryColor, fontSize: 18)),
           onPressed: (_) {
             changeFriendVerificationMethod(denyAny);
             Navigator.of(context, rootNavigator: true).pop();
@@ -147,27 +152,18 @@ class _ProfileState extends State<MyProfile> {
         ),
       ],
       cancelAction: CancelAction(
-        title: Text(
-          TIM_t("取消"),
-          style: const TextStyle(fontSize: 18),
-        ),
-      ), // onPressed parameter is optional by default will dismiss the ActionSheet
+        title: Text(TIM_t("取消"), style: const TextStyle(fontSize: 18)),
+      ),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     final LocalSetting localSetting = Provider.of<LocalSetting>(context);
-    final themeType = Provider.of<DefaultThemeData>(context).currentThemeType;
-    final theme = Provider.of<DefaultThemeData>(context).theme;
+    final themeData = Provider.of<DefaultThemeData>(context);
+    final themeType = themeData.currentThemeType;
+    final theme = themeData.theme;
     final loginUserInfoModel = Provider.of<LoginUserInfo>(context);
-    final bool isWideScreen =
-        TUIKitScreenUtils.getFormFactor() == DeviceType.Desktop;
     final V2TimUserFullInfo loginUserInfo = loginUserInfoModel.loginUserInfo;
     return TIMUIKitProfile(
       isSelf: true,
@@ -176,170 +172,111 @@ class _ProfileState extends State<MyProfile> {
       builder: (BuildContext context, V2TimFriendInfo userInfo,
           V2TimConversation conversation, int friendType, bool isMute) {
         final userProfile = userInfo.userProfile;
-        final int? allowType = userProfile?.allowType;
-        final allowText = _getAllowText(allowType);
+        final allowText = _getAllowText(userProfile?.allowType);
         return SingleChildScrollView(
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
                         builder: (context) => MyProfileDetail(
                             userProfile: userProfile,
-                            controller: _timuiKitProfileController)),
-                  );
-                },
-                child: ThemeUserInfoCard(
-                  userInfo: userProfile,
-                  showArrowRightIcon: true,
-                ),
-              ),
-              // 好友验证方式选
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                child: InkWell(
-                  onTap: () {
-                    showApplicationTypeSheet(theme);
-                  },
-                  child: ThemeOperationItem(
-                    isEmpty: false,
-                    operationName: TIM_t("加我为好友的方式"),
-                    operationRightWidget: Text(
-                      allowText,
-                      textAlign: isWideScreen ? null : TextAlign.end,
+                            controller: _timuiKitProfileController),
+                      ),
+                    ),
+                    child: ProfileHeader(
+                      userInfo: userProfile,
+                      showArrowRightIcon: true,
                     ),
                   ),
-                ),
-              ),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SkinPage(),
-                    ),
-                  );
-                },
-                child: ThemeOperationItem(
-                  isEmpty: false,
-                  operationName: TIM_t("更换皮肤"),
-                  operationRightWidget: Text(
-                      DefTheme.defaultThemeName[themeType]!,
-                      textAlign: isWideScreen ? null : TextAlign.end,
-                      style: TextStyle(color: theme.primaryColor)),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SkinPage(),
-                    ),
-                  );
-                },
-                child: ThemeOperationItem(
-                  isEmpty: false,
-                  operationName: TIM_t("夜间模式"),
-                  operationRightWidget: Text(
-                    Provider.of<DefaultThemeData>(context).darkMode.label,
-                    textAlign: isWideScreen ? null : TextAlign.end,
-                    style: TextStyle(color: theme.weakTextColor),
+                  ProfileSection(
+                    title: TIM_t("偏好设置"),
+                    rows: [
+                      ProfileRow(
+                        label: TIM_t("加我为好友的方式"),
+                        value: allowText,
+                        onTap: () => showApplicationTypeSheet(theme),
+                      ),
+                      ProfileRow(
+                        label: TIM_t("更换皮肤"),
+                        value: DefTheme.defaultThemeName[themeType]!,
+                        valueColor: theme.primaryColor,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SkinPage()),
+                        ),
+                      ),
+                      ProfileRow(
+                        label: TIM_t("夜间模式"),
+                        value: themeData.darkMode.label,
+                        onTap: () => _showDarkModeSheet(themeData),
+                      ),
+                      ProfileRow(
+                        label: TIM_t("大文件分片大小"),
+                        value: "${localSetting.chunkSizeMB} MB",
+                        onTap: () => _showChunkSizeSheet(localSetting),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              InkWell(
-                onTap: () {
-                  _showChunkSizeSheet(localSetting);
-                },
-                child: ThemeOperationItem(
-                  isEmpty: false,
-                  operationName: TIM_t("大文件分片大小"),
-                  operationRightWidget: Text(
-                    "${localSetting.chunkSizeMB} MB",
-                    textAlign: isWideScreen ? null : TextAlign.end,
-                    style: TextStyle(color: theme.weakTextColor),
+                  ProfileSection(
+                    title: TIM_t("消息与联系人"),
+                    rows: [
+                      ProfileRow(
+                        label: TIM_t("消息阅读状态"),
+                        description: TIM_t(
+                            "关闭后，您收发的消息均不带消息阅读状态，您将无法看到对方是否已读，同时对方也无法看到你是否已读。"),
+                        switchValue: localSetting.isShowReadingStatus,
+                        onSwitchChanged: (bool value) {
+                          localSetting.isShowReadingStatus = value;
+                          if (value) {
+                            ToastUtils.toast(TIM_t("该功能为旗舰版功能"));
+                          }
+                        },
+                      ),
+                      ProfileRow(
+                        label: TIM_t("显示在线状态"),
+                        description: TIM_t(
+                            "关闭后，您将不可以在会话列表和通讯录中看到好友在线或离线的状态提示。"),
+                        switchValue: localSetting.isShowOnlineStatus,
+                        onSwitchChanged: (bool value) =>
+                            localSetting.isShowOnlineStatus = value,
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              ThemeOperationItem(
-                isEmpty: false,
-                operationName: TIM_t("消息阅读状态"),
-                operationDescription:
-                    TIM_t("关闭后，您收发的消息均不带消息阅读状态，您将无法看到对方是否已读，同时对方也无法看到你是否已读。"),
-                type: "switch",
-                operationValue: localSetting.isShowReadingStatus,
-                onSwitchChange: (bool value) {
-                  localSetting.isShowReadingStatus = value;
-                  if (value) {
-                    ToastUtils.toast(TIM_t("该功能为旗舰版功能"));
-                  }
-                },
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              ThemeOperationItem(
-                isEmpty: false,
-                operationName: TIM_t("显示在线状态"),
-                operationDescription: TIM_t("关闭后，您将不可以在会话列表和通讯录中看到好友在线或离线的状态提示。"),
-                type: "switch",
-                operationValue: localSetting.isShowOnlineStatus,
-                onSwitchChange: (bool value) {
-                  localSetting.isShowOnlineStatus = value;
-                },
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const About(),
-                    ),
-                  );
-                },
-                child: ThemeOperationItem(
-                  isEmpty: false,
-                  operationName: TIM_t("关于腾讯云 · IM"),
-                  operationRightWidget: const Text(""),
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              InkWell(
-                onTap: _handleLogout,
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                      color: theme.weakBackgroundColor,
-                      border: Border(
-                          bottom: BorderSide(
-                              color: theme.weakDividerColor ??
-                                  hexToColor("E5E5E5")))),
-                  child: Text(
-                    TIM_t("退出登录"),
-                    style: TextStyle(color: hexToColor("FF584C"), fontSize: 17),
+                  ProfileSection(
+                    title: TIM_t("关于"),
+                    rows: [
+                      ProfileRow(
+                        label: TIM_t("关于腾讯云 · IM"),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const About()),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              )
-            ],
-          )
+                  ProfileSection(
+                    rows: [
+                      ProfileRow(
+                        label: TIM_t("退出登录"),
+                        danger: true,
+                        showArrow: false,
+                        onTap: _handleLogout,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
