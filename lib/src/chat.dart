@@ -13,6 +13,7 @@ import 'package:tencent_cloud_chat_demo/src/group_application_list.dart';
 import 'package:tencent_cloud_chat_demo/src/group_profile.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/custom_sticker_package.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
+import 'package:tencent_cloud_chat_demo/src/file_message_bubble.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/tencent_page.dart';
 import 'package:tencent_cloud_chat_demo/src/user_profile.dart';
@@ -829,6 +830,11 @@ class _ChatState extends State<Chat> {
               clearJump: clearJump,
               chatController: _chatController,
             );
+          },
+          // uikit 自带文件气泡的底色/文字色在明暗模式下对比度失衡（文件名看不清），
+          // 改用应用侧自绘，配色跟随应用主题，大小屏自适应。
+          fileMessageItemBuilder: (message, isShowJump, clearJump) {
+            return FileMessageBubble(message: message);
           },
           renderingDirectionCallback: (message) {
             final isCallOutgoing = CustomMessageElem.isC2CCallOutgoing(message);
