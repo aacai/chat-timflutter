@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import 'package:adaptive_action_sheet/adaptive_action_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
@@ -61,29 +58,26 @@ class MyProfileDetailState extends State<MyProfileDetail> {
     }
   }
 
-  void showGenderChoseSheet(BuildContext context, TUITheme? theme) {
-    showAdaptiveActionSheet(
-      context: context,
-      title: Text(TIM_t("性别")),
-      actions: <BottomSheetAction>[
-        BottomSheetAction(
-          title: Text(TIM_t("男"), style: TextStyle(color: theme?.primaryColor)),
-          onPressed: (_) => _setGender(1, () => Navigator.pop(context)),
-        ),
-        BottomSheetAction(
-          title: Text(TIM_t("女"), style: TextStyle(color: theme?.primaryColor)),
-          onPressed: (_) => _setGender(2, () => Navigator.pop(context)),
-        ),
-      ],
-      cancelAction: CancelAction(title: Text(TIM_t("取消"))),
-    );
-  }
-
-  Future<void> _setGender(int gender, VoidCallback close) async {
-    close();
+  Future<void> _setGender(int gender) async {
     final res = await widget.controller?.updateGender(gender);
     if (res?.code == 0 && mounted) {
       setState(() => userProfile?.gender = gender);
+    }
+  }
+
+  Future<void> _pickGender(TUITheme theme) async {
+    final picked = await showProfilePickerDialog<int>(
+      context: context,
+      title: TIM_t("性别"),
+      selected: userProfile?.gender ?? 0,
+      accent: theme.primaryColor,
+      options: [
+        ProfileOption(value: 1, label: TIM_t("男"), icon: Icons.male),
+        ProfileOption(value: 2, label: TIM_t("女"), icon: Icons.female),
+      ],
+    );
+    if (picked != null) {
+      await _setGender(picked);
     }
   }
 
@@ -101,12 +95,21 @@ class MyProfileDetailState extends State<MyProfileDetail> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectDate(BuildContext context, TUITheme theme) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: selectedDate,
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                primary: theme.primaryColor,
+                surface: AppColors.elevatedSurfaceOf(ctx),
+              ),
+        ),
+        child: child!,
+      ),
     );
     if (pickedDate != null && pickedDate != selectedDate) {
       final birthdayString = pickedDate.year.toString() +
@@ -132,69 +135,35 @@ class MyProfileDetailState extends State<MyProfileDetail> {
     return str;
   }
 
-  Offset _inputOffset(TapDownDetails details) {
-    final size = MediaQuery.of(context).size;
-    return Offset(
-      min(details.globalPosition.dx, size.width - 400),
-      min(details.globalPosition.dy, size.height - 100),
-    );
-  }
-
-  void _editNickName(TapDownDetails details, TUITheme theme) {
-    widget.controller?.showTextInputBottomSheet(
+  Future<void> _editNickName(TUITheme theme) async {
+    final text = await showProfileTextDialog(
       context: context,
       title: TIM_t("修改昵称"),
-      tips: TIM_t("仅限汉字、英文、数字和下划线"),
-      initOffset: _inputOffset(details),
-      onSubmitted: (String nickName) async {
-        final res = await widget.controller?.updateNickName(nickName);
-        if (res?.code == 0 && mounted) {
-          setState(() => userProfile?.nickName = nickName);
-        }
-      },
-      theme: theme,
+      hint: TIM_t("仅限汉字、英文、数字和下划线"),
+      initialText: userProfile?.nickName ?? "",
+      maxLength: 30,
+      accent: theme.primaryColor,
     );
+    if (text == null || text.isEmpty) return;
+    final res = await widget.controller?.updateNickName(text);
+    if (res?.code == 0 && mounted) {
+      setState(() => userProfile?.nickName = text);
+    }
   }
 
-  void _editSignature(TapDownDetails details, TUITheme theme) {
-    widget.controller?.showTextInputBottomSheet(
+  Future<void> _editSignature(TUITheme theme) async {
+    final text = await showProfileTextDialog(
       context: context,
       title: TIM_t("修改签名"),
-      tips: TIM_t("仅限汉字、英文、数字和下划线"),
-      initOffset: _inputOffset(details),
-      onSubmitted: (String selfSignature) async {
-        final res =
-            await widget.controller?.updateSelfSignature(selfSignature);
-        if (res?.code == 0 && mounted) {
-          setState(() => userProfile?.selfSignature = selfSignature);
-        }
-      },
-      theme: theme,
+      hint: TIM_t("仅限汉字、英文、数字和下划线"),
+      initialText: userProfile?.selfSignature ?? "",
+      maxLength: 60,
+      accent: theme.primaryColor,
     );
-  }
-
-  void _pickGender(TapDownDetails details, TUITheme theme) {
-    if (TUIKitScreenUtils.getFormFactor(context) == DeviceType.Desktop) {
-      TUIKitWidePopup.showPopupWindow(
-        isDarkBackground: false,
-        operationKey: TUIKitWideModalOperationKey.secondaryClickUserAvatar,
-        context: context,
-        offset: Offset(details.globalPosition.dx, details.globalPosition.dy),
-        child: (closeFunc) => AppMenu(
-          items: [
-            AppMenuItem(
-                label: TIM_t("男"),
-                icon: Icons.male,
-                onTap: () => _setGender(1, closeFunc)),
-            AppMenuItem(
-                label: TIM_t("女"),
-                icon: Icons.female,
-                onTap: () => _setGender(2, closeFunc)),
-          ],
-        ),
-      );
-    } else {
-      showGenderChoseSheet(context, theme);
+    if (text == null) return;
+    final res = await widget.controller?.updateSelfSignature(text);
+    if (res?.code == 0 && mounted) {
+      setState(() => userProfile?.selfSignature = text);
     }
   }
 
@@ -273,14 +242,16 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                         title: TIM_t("基本信息"),
                         rows: [
                           ProfileRow(
+                            icon: Icons.person_outline,
                             label: TIM_t("昵称"),
                             value: nickName.isNotEmpty
                                 ? nickName
                                 : TIM_t("未填写"),
                             valueMuted: nickName.isEmpty,
-                            onTapDown: (d) => _editNickName(d, theme),
+                            onTap: () => _editNickName(theme),
                           ),
                           ProfileRow(
+                            icon: Icons.badge_outlined,
                             label: TIM_t("账号"),
                             showArrow: false,
                             valueWidget: SelectableText(
@@ -292,26 +263,29 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                             ),
                           ),
                           ProfileRow(
+                            icon: Icons.edit_outlined,
                             label: TIM_t("个性签名"),
                             value: signature.isNotEmpty
                                 ? signature
                                 : TIM_t("未填写"),
                             valueMuted: signature.isEmpty,
-                            onTapDown: (d) => _editSignature(d, theme),
+                            onTap: () => _editSignature(theme),
                           ),
                           ProfileRow(
+                            icon: Icons.wc,
                             label: TIM_t("性别"),
                             value: gender == 1
                                 ? TIM_t("男")
                                 : (gender == 2 ? TIM_t("女") : TIM_t("未填写")),
                             valueMuted: gender != 1 && gender != 2,
-                            onTapDown: (d) => _pickGender(d, theme),
+                            onTap: () => _pickGender(theme),
                           ),
                           ProfileRow(
+                            icon: Icons.cake_outlined,
                             label: TIM_t("生日"),
                             value: _birthdayText(),
                             valueMuted: !hasBirthday,
-                            onTap: () => _selectDate(context),
+                            onTap: () => _selectDate(context, theme),
                           ),
                         ],
                       ),
@@ -320,6 +294,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                           title: TIM_t("更多"),
                           rows: [
                             ProfileRow(
+                              icon: Icons.settings_outlined,
                               label: TIM_t("设置"),
                               onTap: () => _openPopup(
                                   TIM_t("设置"),
@@ -329,6 +304,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                                   theme),
                             ),
                             ProfileRow(
+                              icon: Icons.mail_outline,
                               label: TIM_t("联系我们"),
                               onTap: () => _openPopup(
                                   TIM_t("联系我们"),
@@ -338,6 +314,7 @@ class MyProfileDetailState extends State<MyProfileDetail> {
                                   theme),
                             ),
                             ProfileRow(
+                              icon: Icons.info_outline,
                               label: TIM_t("关于"),
                               onTap: () => _openPopup(
                                   TIM_t("关于我们"),

@@ -97,7 +97,7 @@ class ThemeOperationItem extends StatelessWidget {
                 child: CupertinoSwitch(
                   value: operationValue ?? false,
                   onChanged: onSwitchChange,
-                  activeColor: theme.primaryColor,
+                  activeTrackColor: theme.primaryColor,
                 ),
               )
             else ...[
@@ -325,6 +325,7 @@ class ProfileHeader extends StatelessWidget {
     final userID = userInfo?.userID ?? "";
     final signature = userInfo?.selfSignature ?? "";
     final showName = nickName.isNotEmpty ? nickName : userID;
+    final isNarrow = MediaQuery.of(context).size.width < 400;
 
     return GestureDetector(
       onTap: onTap,
@@ -334,7 +335,8 @@ class ProfileHeader extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            padding: EdgeInsets.symmetric(
+                horizontal: isNarrow ? 16 : 24, vertical: isNarrow ? 18 : 24),
             child: Row(
               children: [
                 GestureDetector(
@@ -347,8 +349,8 @@ class ProfileHeader extends StatelessWidget {
                           color: accent.withValues(alpha: 0.35), width: 2),
                     ),
                     child: SizedBox(
-                      width: 68,
-                      height: 68,
+                      width: isNarrow ? 56 : 68,
+                      height: isNarrow ? 56 : 68,
                       child: Avatar(
                         faceUrl: userInfo?.faceUrl ?? "",
                         showName: showName,
@@ -356,7 +358,7 @@ class ProfileHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 18),
+                SizedBox(width: isNarrow ? 14 : 18),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +369,7 @@ class ProfileHeader extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 21,
+                            fontSize: isNarrow ? 18 : 21,
                             fontWeight: FontWeight.w600,
                             color: onSurface),
                       ),
@@ -405,6 +407,7 @@ class ProfileHeader extends StatelessWidget {
 /// 空值、危险操作都有对应的弱化与警示态。
 class ProfileRow extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final String? value;
   final Widget? valueWidget;
   final String? description;
@@ -413,13 +416,13 @@ class ProfileRow extends StatelessWidget {
   final bool showArrow;
   final bool danger;
   final VoidCallback? onTap;
-  final void Function(TapDownDetails details)? onTapDown;
   final bool? switchValue;
   final ValueChanged<bool>? onSwitchChanged;
 
   const ProfileRow({
     Key? key,
     required this.label,
+    this.icon,
     this.value,
     this.valueWidget,
     this.description,
@@ -428,7 +431,6 @@ class ProfileRow extends StatelessWidget {
     this.showArrow = true,
     this.danger = false,
     this.onTap,
-    this.onTapDown,
     this.switchValue,
     this.onSwitchChanged,
   }) : super(key: key);
@@ -439,10 +441,19 @@ class ProfileRow extends StatelessWidget {
     final onSurface = AppColors.onSurfaceOf(context);
     final weakText = AppColors.weakTextOf(context);
     final dangerColor = theme.cautionColor ?? const Color(0xFFFF584C);
+    final isNarrow = MediaQuery.of(context).size.width < 400;
+
+    // 值区不能再与标题的 Expanded 平分剩余空间（两者默认 flex:1 会让箭头
+    // 停在行中间）。用非 flex 的限宽容器，箭头才能固定在行尾。
+    final valueMaxWidth = MediaQuery.of(context).size.width * (isNarrow ? 0.42 : 0.34);
 
     if (danger) {
       return InkWell(
         onTap: onTap,
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: AppColors.overlayOf(context),
         child: Container(
           height: 50,
           alignment: Alignment.center,
@@ -460,18 +471,28 @@ class ProfileRow extends StatelessWidget {
     final isSwitch = onSwitchChanged != null;
     return InkWell(
       onTap: onTap,
-      onTapDown: onTapDown,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      hoverColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      splashColor: AppColors.overlayOf(context),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: EdgeInsets.symmetric(
+            horizontal: isNarrow ? 12 : 16, vertical: 12),
         child: Row(
           children: [
+            if (icon != null && !isNarrow) ...[
+              Icon(icon, size: 18, color: weakText),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(label,
-                      style: TextStyle(fontSize: 14, color: onSurface)),
+                      style: TextStyle(
+                          fontSize: isNarrow ? 13 : 14, color: onSurface)),
                   if (description != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -488,11 +509,12 @@ class ProfileRow extends StatelessWidget {
                 child: CupertinoSwitch(
                   value: switchValue ?? false,
                   onChanged: onSwitchChanged,
-                  activeColor: theme.primaryColor,
+                  activeTrackColor: theme.primaryColor,
                 ),
               )
             else ...[
-              Flexible(
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: valueMaxWidth),
                 child: valueWidget ??
                     Text(
                       value ?? "",
@@ -500,17 +522,19 @@ class ProfileRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: isNarrow ? 13 : 14,
                           color: valueColor ??
                               (valueMuted ? weakText : onSurface)),
                     ),
               ),
+              // 无箭头时占位，保证各行的值区右边界对齐。
               if (showArrow)
                 Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child:
-                      Icon(Icons.chevron_right, size: 18, color: weakText),
-                ),
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Icon(Icons.chevron_right, size: 18, color: weakText),
+                )
+              else
+                const SizedBox(width: 24),
             ],
           ],
         ),
@@ -532,6 +556,7 @@ class ProfileSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final surface = AppColors.elevatedSurfaceOf(context);
     final divider = AppColors.dividerOf(context);
+    final isNarrow = MediaQuery.of(context).size.width < 400;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -550,7 +575,7 @@ class ProfileSection extends StatelessWidget {
         else
           const SizedBox(height: 16),
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
+          margin: EdgeInsets.symmetric(horizontal: isNarrow ? 12 : 16),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: surface,

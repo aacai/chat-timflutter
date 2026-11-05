@@ -113,9 +113,15 @@ class AppModal {
     final onConfirmCb = onConfirm;
     // 菜单 / 确认框按内容自适应；设置、关于等内容页用调用方给定的尺寸。
     final bool fixedSize = width != null && height != null && height > 200;
-    final dialogWidth = (width ?? 360).clamp(0.0, size.width - 32).toDouble();
-    final dialogHeight =
-        fixedSize ? height.clamp(0.0, size.height - 48).toDouble() : 0.0;
+    final isCompactScreen = size.width < 600;
+    final dialogWidth = isCompactScreen
+        ? size.width - 24
+        : (width ?? 360).clamp(0.0, size.width - 32).toDouble();
+    final dialogHeight = fixedSize
+        ? (isCompactScreen
+            ? size.height - 80
+            : height.clamp(0.0, size.height - 48).toDouble())
+        : 0.0;
 
     final surface = AppColors.elevatedSurfaceOf(context);
     final onSurface = AppColors.onSurfaceOf(context);
@@ -370,6 +376,353 @@ class AppBackBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 单选对话框的一个选项。
+class ProfileOption<T> {
+  final T value;
+  final String label;
+  final IconData? icon;
+
+  const ProfileOption({required this.value, required this.label, this.icon});
+}
+
+bool _useBottomSheet(BuildContext context) =>
+    MediaQuery.of(context).size.width < 600;
+
+Color _accentOf(BuildContext context, Color? accent) =>
+    accent ?? Theme.of(context).colorScheme.primary;
+
+Widget _dialogActions(BuildContext context,
+    {required VoidCallback onCancel,
+    required VoidCallback onConfirm,
+    required Color accent,
+    required String confirmText}) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: onCancel,
+          child: Text(TIM_t("取消"),
+              style: TextStyle(color: AppColors.weakTextOf(context))),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: onConfirm,
+          style: FilledButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: AppColors.onPrimary,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text(confirmText),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _dialogTitle(BuildContext context, String title) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      child: Text(
+        title,
+        style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: AppColors.onSurfaceOf(context)),
+      ),
+    );
+
+/// 统一的文本编辑对话框：宽屏为轻量 Dialog，移动端为 BottomSheet。
+/// 返回编辑后的文本；取消返回 null。
+Future<String?> showProfileTextDialog({
+  required BuildContext context,
+  required String title,
+  String hint = "",
+  String initialText = "",
+  int maxLength = 100,
+  Color? accent,
+}) async {
+  final controller = TextEditingController(text: initialText);
+  final primary = _accentOf(context, accent);
+  final surface = AppColors.elevatedSurfaceOf(context);
+  final onSurface = AppColors.onSurfaceOf(context);
+  final weakText = AppColors.weakTextOf(context);
+  final divider = AppColors.dividerOf(context);
+
+  Widget field() => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+        child: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: maxLength,
+          maxLines: 3,
+          minLines: 1,
+          style: TextStyle(fontSize: 15, color: onSurface),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 14, color: weakText),
+            filled: true,
+            fillColor: AppColors.overlayOf(context),
+            counterStyle: TextStyle(fontSize: 11, color: weakText),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: divider, width: 0.5)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: primary, width: 1.2)),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+        ),
+      );
+
+  String? result;
+  if (_useBottomSheet(context)) {
+    result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: divider,
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                _dialogTitle(sheetContext, title),
+                field(),
+                _dialogActions(sheetContext,
+                    onCancel: () => Navigator.of(sheetContext).pop(),
+                    onConfirm: () => Navigator.of(sheetContext)
+                        .pop(controller.text.trim()),
+                    accent: primary,
+                    confirmText: TIM_t("保存")),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  } else {
+    result = await showGeneralDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: TIM_t("取消"),
+    barrierColor: Colors.black.withValues(alpha: 0.42),
+    transitionDuration: const Duration(milliseconds: 120),
+    pageBuilder: (dialogContext, animation, secondaryAnimation) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 400,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: divider, width: 0.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _dialogTitle(dialogContext, title),
+                field(),
+                _dialogActions(dialogContext,
+                    onCancel: () => Navigator.of(dialogContext).pop(),
+                    onConfirm: () => Navigator.of(dialogContext)
+                        .pop(controller.text.trim()),
+                    accent: primary,
+                    confirmText: TIM_t("保存")),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curve,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1.0).animate(curve),
+          child: child,
+        ),
+      );
+    },
+    );
+  }
+  controller.dispose();
+  return result;
+}
+
+/// 统一的单选对话框：宽屏 Dialog / 移动端 BottomSheet，点选即返回。
+Future<T?> showProfilePickerDialog<T>({
+  required BuildContext context,
+  required String title,
+  required List<ProfileOption<T>> options,
+  T? selected,
+  Color? accent,
+}) async {
+  final primary = _accentOf(context, accent);
+  final surface = AppColors.elevatedSurfaceOf(context);
+  final onSurface = AppColors.onSurfaceOf(context);
+  final weakText = AppColors.weakTextOf(context);
+  final divider = AppColors.dividerOf(context);
+
+  Widget list(BuildContext ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < options.length; i++) ...[
+            if (i > 0)
+              Divider(height: 1, thickness: 0.5, indent: 20, color: divider),
+            InkWell(
+              onTap: () => Navigator.of(ctx).pop(options[i].value),
+              hoverColor: AppColors.overlayOf(ctx),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 14),
+                child: Row(
+                  children: [
+                    if (options[i].icon != null) ...[
+                      Icon(options[i].icon,
+                          size: 18,
+                          color: options[i].value == selected
+                              ? primary
+                              : weakText),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Text(options[i].label,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: options[i].value == selected
+                                  ? primary
+                                  : onSurface)),
+                    ),
+                    if (options[i].value == selected)
+                      Icon(Icons.check, size: 18, color: primary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      );
+
+  if (_useBottomSheet(context)) {
+    return showModalBottomSheet<T>(
+      context: context,
+      backgroundColor: surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: divider,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              _dialogTitle(sheetContext, title),
+              list(sheetContext),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: Text(TIM_t("取消"),
+                      style: TextStyle(color: weakText)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: TIM_t("取消"),
+    barrierColor: Colors.black.withValues(alpha: 0.42),
+    transitionDuration: const Duration(milliseconds: 120),
+    pageBuilder: (dialogContext, animation, secondaryAnimation) => Center(
+      child: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(dialogContext).size.height - 80),
+          child: Container(
+            width: 360,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: divider, width: 0.5),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _dialogTitle(dialogContext, title),
+                  list(dialogContext),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text(TIM_t("取消"),
+                            style: TextStyle(color: weakText)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+    transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+      final curve = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      return FadeTransition(
+        opacity: curve,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1.0).animate(curve),
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
 /// 首页按窗口宽度实时切换宽屏 / 移动布局。
