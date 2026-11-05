@@ -167,10 +167,12 @@ jobs:
         run: |
           kill "$(cat "$RUNNER_TEMP/monitor.pid")" 2>/dev/null || true
           cat "$RUNNER_TEMP/monitor.log" 2>/dev/null || echo "没有监控记录"
+      - name: 重命名为规范英文名
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/chat-timflutter-android-arm64.apk
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-android-arm64-v8a
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/chat-timflutter-android-arm64.apk
           # v4 默认 if-no-files-found: warn，0 个文件也算 success；windows 就是这样空过了好几天。
           if-no-files-found: error
       # 混淆后的崩溃栈只有这两份文件能还原，必须跟版本一起留档；APK 里不能有它们。
@@ -463,12 +465,20 @@ jobs:
         run: $GITHUB_WORKSPACE/node_modules/.bin/tauri build --bundles deb,appimage
       - name: 列出产物
         run: ls -lh src-tauri/target/release/bundle/deb/ src-tauri/target/release/bundle/appimage/
+      # Tauri 按 productName 生成“可达_0.1.0_amd64”式文件名，中文在上传时会被剥离；
+      # 统一重命名为与其他平台一致的 chat-timflutter-linux-x64.{deb,AppImage}。
+      - name: 重命名为规范英文名
+        run: |
+          mkdir -p dist-upload
+          cp "$(ls src-tauri/target/release/bundle/deb/*.deb)" dist-upload/chat-timflutter-linux-x64.deb
+          cp "$(ls src-tauri/target/release/bundle/appimage/*.AppImage)" dist-upload/chat-timflutter-linux-x64.AppImage
+          ls -lh dist-upload
       - uses: actions/upload-artifact@v4
         with:
           name: chat-timflutter-linux-x64
           path: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/appimage/*.AppImage
+            dist-upload/chat-timflutter-linux-x64.deb
+            dist-upload/chat-timflutter-linux-x64.AppImage
           if-no-files-found: error
 
   release:
