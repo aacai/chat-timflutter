@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
-import 'package:tencent_cloud_chat_uikit/theme/color.dart';
 import 'package:tencent_cloud_chat_uikit/theme/tui_theme.dart';
 
 class DefaultThemeData with ChangeNotifier {
@@ -15,10 +14,11 @@ class DefaultThemeData with ChangeNotifier {
   TUITheme _theme = DefTheme.getTheme(ThemeType.brisk, DarkModeType.dark);
 
   DefaultThemeData() {
-    // 立刻把主题同步给 TUIKit 组件（AppBar、搜索框、会话项等都读这份全局主题）。
-    // 之前只有 prefs 里存在 darkMode 记录时才会同步，导致首次启动时
-    // TUIKit 组件仍在用浅色主题，深色界面里出现一堆白底。
-    _applyTheme();
+    // 强制首次同步：初始 _theme 与 getTheme 结果相同，theme getter 里的
+    // _sameTheme 短路会跳过 setTheme，导致 TUIKit core 全局主题停留在
+    // 浅色默认值（ColumnMenu / 文件气泡等读 core 主题的组件白底白字）。
+    _theme = DefTheme.getTheme(_currentThemeType, _darkMode);
+    _coreInstance.setTheme(theme: _theme);
     _loadDarkMode();
   }
 
@@ -98,7 +98,8 @@ class DefaultThemeData with ChangeNotifier {
   }
 
   void _applyTheme() {
-    final next = theme;
+    // 强制同步，不走 theme getter 的 _sameTheme 短路（避免漏同步给 TUIKit core）。
+    final next = DefTheme.getTheme(_currentThemeType, _darkMode);
     _theme = next;
     _coreInstance.setTheme(theme: next);
   }
