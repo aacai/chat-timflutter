@@ -437,9 +437,14 @@ jobs:
         with:
           node-version: "20"
       # 预编译 CLI，避免 cargo install tauri-cli 在 runner 上重编译整个 Rust 依赖树。
+      # 必须在 src-tauri 内安装/构建：frontendDist 是 ../build/web（相对 src-tauri），
+      # 若在仓库根目录跑 tauri，../build/web 会解析到仓库根（含 node_modules）而触发
+      # “frontendDist includes node_modules” 错误。
       - name: 装 Tauri CLI
+        working-directory: src-tauri
         run: npm install --no-save --no-audit --no-fund '@tauri-apps/cli@^2'
       - name: 打 deb / AppImage
+        working-directory: src-tauri
         run: ./node_modules/.bin/tauri build --bundles deb,appimage
       - name: 列出产物
         run: ls -lh src-tauri/target/release/bundle/deb/ src-tauri/target/release/bundle/appimage/

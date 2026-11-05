@@ -35,11 +35,15 @@ for f in main.dart.js flutter_bootstrap.js trtc-wrapper.js \
   [ -f "build/web/$f" ] || { echo "缺少 $f" >&2; exit 1; }
 done
 
-echo "==> [3/4] 安装预编译 Tauri CLI"
+echo "==> [3/4] 安装预编译 Tauri CLI（装在 src-tauri 内，使 node_modules 不混入 frontendDist）"
+pushd "$ROOT/src-tauri" >/dev/null
 npm install --no-save --no-audit --no-fund '@tauri-apps/cli@^2'
+TAURI="$PWD/node_modules/.bin/tauri"
 "$TAURI" --version
 
 echo "==> [4/4] Tauri 打包（deb / AppImage）"
+# frontendDist 为 ../build/web（相对 src-tauri），必须在 src-tauri 内运行。
 "$TAURI" build --bundles deb,appimage
+popd >/dev/null
 
 echo "==> 完成，产物在 src-tauri/target/release/bundle/"
