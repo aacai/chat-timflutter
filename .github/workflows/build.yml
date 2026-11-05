@@ -433,19 +433,34 @@ jobs:
           grep -q 'flutter_bootstrap.js' build/web/index.html
           test -f build/web/flutter_bootstrap.js
           test -f build/web/main.dart.js
+      # Tauri v2 拒绝 frontendDist 里出现名为 node_modules 的目录。而 web/index.html
+      # 引用 ./node_modules/ 下的 TRTC JS，Flutter 会把 web/node_modules 原样复制进
+      # build/web。因此这里把产物复制到独立目录，把依赖目录改名为 vendor 并替换引用，
+      # 得到纯静态资源目录（不改仓库里被 git 跟踪的 web/）。
+      - name: 隔离前端产物
+        run: |
+          rm -rf src-tauri/frontend-dist
+          mkdir -p src-tauri/frontend-dist
+          cp -a build/web/. src-tauri/frontend-dist/
+          test -d src-tauri/frontend-dist/node_modules
+          mv src-tauri/frontend-dist/node_modules src-tauri/frontend-dist/vendor
+          find src-tauri/frontend-dist -type f \( -name '*.html' -o -name '*.js' -o -name '*.json' \) \
+            -exec sed -i 's#node_modules/#vendor/#g' {} +
+          rm -f src-tauri/frontend-dist/package.json src-tauri/frontend-dist/package-lock.json
+          ! test -d src-tauri/frontend-dist/node_modules
+          grep -q 'vendor/@tencentcloud/chat/index.js' src-tauri/frontend-dist/index.html
+          test -f src-tauri/frontend-dist/vendor/@tencentcloud/chat/index.js
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
       # 预编译 CLI，避免 cargo install tauri-cli 在 runner 上重编译整个 Rust 依赖树。
-      # 必须在 src-tauri 内安装/构建：frontendDist 是 ../build/web（相对 src-tauri），
-      # 若在仓库根目录跑 tauri，../build/web 会解析到仓库根（含 node_modules）而触发
-      # “frontendDist includes node_modules” 错误。
+      # 仓库根有 package.json，npm 会向上查找并把包装进根目录 node_modules，
+      # 所以固定在根目录安装，构建时用绝对路径调用，避免 cwd 影响 CLI 路径。
       - name: 装 Tauri CLI
-        working-directory: src-tauri
         run: npm install --no-save --no-audit --no-fund '@tauri-apps/cli@^2'
       - name: 打 deb / AppImage
         working-directory: src-tauri
-        run: ./node_modules/.bin/tauri build --bundles deb,appimage
+        run: $GITHUB_WORKSPACE/node_modules/.bin/tauri build --bundles deb,appimage
       - name: 列出产物
         run: ls -lh src-tauri/target/release/bundle/deb/ src-tauri/target/release/bundle/appimage/
       - uses: actions/upload-artifact@v4

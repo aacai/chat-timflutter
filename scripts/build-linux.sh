@@ -22,10 +22,10 @@ FLUTTER="flutter"
 if command -v fvm >/dev/null 2>&1; then FLUTTER="fvm flutter"; fi
 TAURI="$ROOT/node_modules/.bin/tauri"
 
-echo "==> [1/4] 构建 Flutter Web 产物（base href 必须为 / 以适配 tauri://localhost）"
+echo "==> [1/5] 构建 Flutter Web 产物（base href 必须为 / 以适配 tauri://localhost）"
 $FLUTTER build web --release --base-href /
 
-echo "==> [2/4] 校验产物资源"
+echo "==> [2/5] 校验产物资源"
 grep -q '<base href="/" />' build/web/index.html || {
   echo "错误：base href 不是 /，Tauri 下资源会 404" >&2
   exit 1
@@ -35,15 +35,28 @@ for f in main.dart.js flutter_bootstrap.js trtc-wrapper.js \
   [ -f "build/web/$f" ] || { echo "缺少 $f" >&2; exit 1; }
 done
 
-echo "==> [3/4] 安装预编译 Tauri CLI（装在 src-tauri 内，使 node_modules 不混入 frontendDist）"
-pushd "$ROOT/src-tauri" >/dev/null
+# Tauri v2 拒绝 frontendDist 里出现名为 node_modules 的目录，而 web/index.html
+# 正好引用 ./node_modules/ 下的 TRTC JS。复制到独立目录并改名，不改 web/ 源码。
+echo "==> [3/5] 隔离前端产物（node_modules -> vendor）"
+DIST="$ROOT/src-tauri/frontend-dist"
+rm -rf "$DIST"
+mkdir -p "$DIST"
+cp -a build/web/. "$DIST/"
+test -d "$DIST/node_modules"
+mv "$DIST/node_modules" "$DIST/vendor"
+find "$DIST" -type f \( -name '*.html' -o -name '*.js' -o -name '*.json' \) \
+  -exec sed -i 's#node_modules/#vendor/#g' {} +
+rm -f "$DIST/package.json" "$DIST/package-lock.json"
+! test -d "$DIST/node_modules"
+grep -q 'vendor/@tencentcloud/chat/index.js' "$DIST/index.html"
+test -f "$DIST/vendor/@tencentcloud/chat/index.js"
+
+echo "==> [4/5] 安装预编译 Tauri CLI（仓库根有 package.json，npm 固定装到根 node_modules）"
 npm install --no-save --no-audit --no-fund '@tauri-apps/cli@^2'
-TAURI="$PWD/node_modules/.bin/tauri"
 "$TAURI" --version
 
-echo "==> [4/4] Tauri 打包（deb / AppImage）"
-# frontendDist 为 ../build/web（相对 src-tauri），必须在 src-tauri 内运行。
+echo "==> [5/5] Tauri 打包（deb / AppImage）"
+cd "$ROOT/src-tauri"
 "$TAURI" build --bundles deb,appimage
-popd >/dev/null
 
 echo "==> 完成，产物在 src-tauri/target/release/bundle/"

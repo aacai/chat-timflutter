@@ -73,6 +73,8 @@ flutter_*.png
 coverage/
 # Tauri / Node 本地构建产物（Linux 包在 GitHub Actions 上构建，不占本机磁盘）
 /node_modules/
+/src-tauri/node_modules/
+/src-tauri/frontend-dist/
 /src-tauri/target/
 /src-tauri/gen/
 /.fvmrc
