@@ -35,7 +35,7 @@
       "icons/128x128@2x.png",
       "icons/icon.png"
     ],
-    "category": "Network",
+    "category": "SocialNetworking",
     "shortDescription": "可达 IM",
     "longDescription": "可达即时通讯桌面客户端 (Linux)",
     "linux": {
