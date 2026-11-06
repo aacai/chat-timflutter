@@ -7,6 +7,7 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/group_application_list.dart';
@@ -356,6 +357,13 @@ class _ChatState extends State<Chat> {
               ],
             ),
           ),
+          if (ChatWindowManager.isSupported)
+            _headerIconButton(
+              Icons.open_in_new,
+              theme,
+              () => ChatWindowManager.instance.open(widget.selectedConversation),
+              primary,
+            ),
           _headerIconButton(Icons.search, theme, _openChatSearch, primary),
           _headerIconButton(
               Icons.more_horiz, theme, _openChatMore, primary),

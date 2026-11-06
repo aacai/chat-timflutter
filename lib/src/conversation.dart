@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/src/chat.dart';
@@ -130,9 +131,14 @@ class _ConversationState extends State<Conversation> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => _MenuSheet(
         conversation: conversation,
+        showOpenInWindow: ChatWindowManager.isSupported,
       ),
     );
     if (action == null || !mounted) {
+      return;
+    }
+    if (action == 'window') {
+      await ChatWindowManager.instance.open(conversation);
       return;
     }
     final manager = _sdk.getConversationManager();
@@ -478,8 +484,13 @@ class _RoundIconButton extends StatelessWidget {
 
 class _MenuSheet extends StatelessWidget {
   final V2TimConversation? conversation;
+  final bool showOpenInWindow;
 
-  const _MenuSheet({Key? key, this.conversation}) : super(key: key);
+  const _MenuSheet({
+    Key? key,
+    this.conversation,
+    this.showOpenInWindow = false,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -489,6 +500,12 @@ class _MenuSheet extends StatelessWidget {
     List<Widget> items;
     if (isGroup) {
       items = [
+        if (showOpenInWindow)
+          _MenuItem(
+            icon: Icons.open_in_new,
+            label: TIM_t("在独立窗口打开"),
+            value: 'window',
+          ),
         _MenuItem(
           icon: Icons.push_pin,
           label: conversation!.isPinned == true

@@ -12,8 +12,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:tencent_calls_uikit/tencent_calls_uikit.dart';
 import 'package:tencent_chat_i18n_tool/language_json/strings.g.dart';
+import 'package:tencent_chat_i18n_tool/tencent_chat_i18n_tool.dart';
 import 'package:tencent_cloud_chat_demo/custom_animation.dart';
 import 'package:tencent_cloud_chat_demo/config.dart';
+import 'package:tencent_cloud_chat_demo/src/independent_chat_window.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/app.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/custom_sticker_package.dart';
 import 'package:tencent_cloud_chat_demo/src/provider/local_setting.dart';
@@ -23,6 +25,7 @@ import 'package:tencent_cloud_chat_demo/src/provider/user_guide_provider.dart';
 import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_colors.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window.dart';
 import 'package:tencent_cloud_chat_demo/utils/theme.dart';
 import 'package:tencent_cloud_chat_uikit/tencent_cloud_chat_uikit.dart';
 import 'package:tencent_cloud_chat_uikit/theme/color.dart';
@@ -58,22 +61,14 @@ void main(List<String> args) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
-  runApp(
-    TranslationProvider(
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => LoginUserInfo()),
-          ChangeNotifierProvider(create: (_) => DefaultThemeData()),
-          ChangeNotifierProvider(create: (_) => CustomStickerPackageData()),
-          ChangeNotifierProvider(
-            create: (_) => LocalSetting(),
-          ),
-          ChangeNotifierProvider(create: (_) => UserGuideProvider()),
-        ],
-        child: const TUIKitDemoApp(),
-      ),
-    ),
-  );
+  // desktop_multi_window 用第二个 Flutter engine 启动子窗口，参数是
+  // ["multi_window", windowId, arguments]。子窗口不走主窗口的登录/路由链。
+  if (args.isNotEmpty && args.first == 'multi_window') {
+    runApp(_chatWindowRoot(args));
+    return;
+  }
+
+  runApp(buildAppRoot());
 
   if (PlatformUtils().isDesktop) {
     doWhenWindowReady(() {
@@ -90,8 +85,46 @@ void main(List<String> args) {
   // );
 }
 
+/// 主窗口与子窗口共用同一套主题、i18n 与 Provider，避免子窗口界面风格漂移。
+Widget buildAppRoot({Widget? home}) {
+  return TranslationProvider(
+    child: MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoginUserInfo()),
+        ChangeNotifierProvider(create: (_) => DefaultThemeData()),
+        ChangeNotifierProvider(create: (_) => CustomStickerPackageData()),
+        ChangeNotifierProvider(create: (_) => LocalSetting()),
+        ChangeNotifierProvider(create: (_) => UserGuideProvider()),
+      ],
+      child: TUIKitDemoApp(home: home),
+    ),
+  );
+}
+
+Widget _chatWindowRoot(List<String> args) {
+  final windowId = args.length > 1 ? int.tryParse(args[1]) : null;
+  final conversation =
+      ChatWindowConversation.parse(args.length > 2 ? args[2] : null);
+  if (windowId == null || conversation == null) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(child: Text(TIM_t("独立窗口参数无效"))),
+      ),
+    );
+  }
+  return buildAppRoot(
+    home: IndependentChatWindow(
+      windowId: windowId,
+      conversation: conversation,
+    ),
+  );
+}
+
 class TUIKitDemoApp extends StatelessWidget {
-  const TUIKitDemoApp({Key? key}) : super(key: key);
+  final Widget? home;
+
+  const TUIKitDemoApp({Key? key, this.home}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     final themeData = Provider.of<DefaultThemeData>(context);
@@ -163,7 +196,7 @@ class TUIKitDemoApp extends StatelessWidget {
             backgroundColor: dark.primaryColor,
           )),
         ),
-        home: const TencentChatApp(),
+        home: home ?? const TencentChatApp(),
         navigatorKey: InitStep.navigatorKey,
         builder: (context, child) => AppEscapeScope(
           child: EasyLoading.init()(context, child) ?? const SizedBox.shrink(),

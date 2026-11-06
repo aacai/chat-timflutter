@@ -18,6 +18,8 @@ if (localPropertiesFile.exists()) {
 
 android {
     compileSdkVersion 36
+    // 本机 NDK 28 安装目录损坏，临时 pin 到已装且完整的 27，避免 :jni 配置失败。
+    ndkVersion "27.0.12077973"
     namespace("com.tencent.flutter.tuikit")
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

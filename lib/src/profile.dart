@@ -9,6 +9,7 @@ import 'package:tencent_cloud_chat_demo/src/my_profile_detail.dart';
 import 'package:tencent_cloud_chat_demo/src/pages/skin/skin_page.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
 import 'package:tencent_cloud_chat_demo/utils/auto_login_store.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
 import 'package:tencent_cloud_chat_sdk/manager/v2_tim_manager.dart';
 import 'package:tencent_cloud_chat_sdk/models/v2_tim_conversation.dart'
@@ -68,6 +69,7 @@ class _ProfileState extends State<MyProfile> {
   _handleLogout() async {
     final res = await _coreServices.logout();
     if (res.code == 0) {
+      await ChatWindowManager.instance.closeAll();
       await AutoLoginStore.clearAll();
       EncryptionService.instance.clearPeerCache();
       Routes().directToLoginPage();

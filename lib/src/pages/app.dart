@@ -25,6 +25,8 @@ import 'package:tencent_cloud_chat_demo/src/provider/theme.dart';
 import 'package:tencent_cloud_chat_demo/src/routes.dart';
 import 'package:tencent_cloud_chat_demo/utils/constant.dart';
 import 'package:tencent_cloud_chat_demo/utils/app_navigation.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window.dart';
+import 'package:tencent_cloud_chat_demo/utils/chat_window_host.dart';
 
 import 'package:tencent_cloud_chat_demo/utils/file_transfer/file_transfer_service.dart';
 import 'package:tencent_cloud_chat_demo/utils/init_step.dart';
@@ -117,6 +119,7 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
   onKickedOffline() async {
     // 被踢下线
     try {
+      await ChatWindowManager.instance.closeAll();
       await TIMUIKitCore.getInstance().logout();
       // 先清登录态再回登录页，否则登录页会立刻自动重登，和被踢的另一端无限对冲。
       await InitStep.removeLocalSetting();
@@ -252,6 +255,8 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
       return;
     } else {}
     _isInitIMSDK = true;
+    // 独立聊天窗口不碰 SDK，全部请求由主窗口这个服务代理。
+    ChatWindowHost.instance.start();
   }
 
   initApp() {
