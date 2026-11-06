@@ -81,6 +81,9 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
         _coreInstance.setOfflinePushStatus(status: AppStatus.foreground);
         break;
       case AppLifecycleState.paused:
+        // 退到后台即释放图片解码缓存；回前台会重新解码。聊天/相册场景内存收益明显，
+        // 代价仅是回前台瞬间图片重新加载，对 IM 类应用可接受。
+        _evictImageCache();
         _coreInstance.setOfflinePushStatus(status: AppStatus.background, totalCount: unreadCount);
         break;
       case AppLifecycleState.detached:
@@ -317,6 +320,20 @@ class _TencentChatAppState extends State<TencentChatApp> with WidgetsBindingObse
     // 注意：Routes 是单例 ChangeNotifier，不能在这里 dispose——
     // 否则应用退出/热重载后单例失效，再 notifyListeners() 推路由会崩。
     WidgetsBinding.instance.removeObserver(this);
+  }
+
+  // 系统发出内存告警时回收图片解码缓存（覆盖原生 Image 与
+  // cached_network_image 的渲染层缓存），避免聊天长列表里大量历史图片撑爆内存。
+  @override
+  void didHaveMemoryPressure() {
+    _evictImageCache();
+    super.didHaveMemoryPressure();
+  }
+
+  void _evictImageCache() {
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
   }
 
   @override
